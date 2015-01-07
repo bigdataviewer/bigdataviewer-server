@@ -15,7 +15,7 @@ import mpicbg.spim.data.SpimDataException;
 import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
 import net.imglib2.realtransform.AffineTransform3D;
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.input.SAXBuilder;
@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
-public class CellHandler extends AbstractHandler
+public class CellHandler extends ContextHandler
 {
 	private final VolatileGlobalCellCache< VolatileShortArray > cache;
 
@@ -62,11 +62,16 @@ public class CellHandler extends AbstractHandler
 	}
 
 	@Override
-	public void handle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
+	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
 	{
 		final String cellString = request.getParameter( "p" );
+
 		if ( cellString == null )
+		{
+			provideXML( baseRequest, response );
 			return;
+		}
+
 		final String[] parts = cellString.split( "/" );
 		if ( parts[ 0 ].equals( "cell" ) )
 		{
@@ -139,9 +144,6 @@ public class CellHandler extends AbstractHandler
 		final Element baseUrl = new Element( "baseUrl" );
 		baseUrl.setText( dataSetURL );
 		ImageLoader.setContent( baseUrl );
-
-//		System.out.println(ImageLoader.getAttribute( "format" ));
-//		System.out.println(ImageLoader.getValue());
 
 		response.setContentType( "application/xml" );
 		response.setStatus( HttpServletResponse.SC_OK );
