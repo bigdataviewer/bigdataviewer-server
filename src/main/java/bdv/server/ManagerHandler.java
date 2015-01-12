@@ -1,6 +1,14 @@
 package bdv.server;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import mpicbg.spim.data.SpimDataException;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -8,20 +16,17 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.util.log.Log;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
-
 public class ManagerHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( ManagerHandler.class );
+
 	private final String baseURL;
+
 	private final Server server;
+
 	private final HandlerCollection handlers;
 
-	public ManagerHandler( String baseURL, Server server, HandlerCollection handlers )
+	public ManagerHandler( final String baseURL, final Server server, final HandlerCollection handlers )
 	{
 		this.baseURL = baseURL;
 		this.server = server;
@@ -40,13 +45,13 @@ public class ManagerHandler extends ContextHandler
 		}
 		else if ( op.equals( "deploy" ) )
 		{
-			String ds = request.getParameter( "ds" );
-			String file = request.getParameter( "file" );
+			final String ds = request.getParameter( "ds" );
+			final String file = request.getParameter( "file" );
 			deploy( ds, file, baseRequest, response );
 		}
 		else if ( op.equals( "undeploy" ) )
 		{
-			String ds = request.getParameter( "ds" );
+			final String ds = request.getParameter( "ds" );
 			undeploy( ds, baseRequest, response );
 		}
 		else
@@ -64,7 +69,7 @@ public class ManagerHandler extends ContextHandler
 
 		final PrintWriter ow = response.getWriter();
 
-		for ( Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
 			if ( handler instanceof CellHandler )
@@ -85,7 +90,7 @@ public class ManagerHandler extends ContextHandler
 		{
 			ctx = new CellHandler( baseURL + datasetName + "/", fileLocation );
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			LOG.warn( "Failed to create a CellHandler", e );
 			e.printStackTrace();
@@ -107,7 +112,7 @@ public class ManagerHandler extends ContextHandler
 		LOG.info( "Remove the context: " + datasetName );
 		boolean ret = false;
 
-		for ( Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
 			if ( handler instanceof CellHandler )
@@ -119,7 +124,7 @@ public class ManagerHandler extends ContextHandler
 					{
 						contextHandler.stop();
 					}
-					catch ( Exception e )
+					catch ( final Exception e )
 					{
 						e.printStackTrace();
 					}
