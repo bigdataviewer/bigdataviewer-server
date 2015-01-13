@@ -15,8 +15,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
 import bdv.img.cache.CacheHints;
@@ -25,6 +24,7 @@ import bdv.img.cache.VolatileCell;
 import bdv.img.cache.VolatileGlobalCellCache;
 import bdv.img.hdf5.Hdf5ImageLoader;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
+import bdv.img.remote.RemoteImageLoader;
 import bdv.img.remote.RemoteImageLoaderMetaData;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -126,35 +126,57 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
+	// TODO: create the remote xml file only once and keep it ready as a String
 	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		final SAXBuilder sax = new SAXBuilder();
-		Document doc;
 		try
 		{
-			doc = sax.build( xmlFile );
+			final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
+			final SpimDataMinimal spimData = io.load( xmlFile );
+			final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
+			seq.setImgLoader( new RemoteImageLoader( dataSetURL ) );
+			final Document doc = new Document( io.toXml( spimData, spimData.getBasePath() ) );
+
+			response.setContentType( "application/xml" );
+			response.setStatus( HttpServletResponse.SC_OK );
+			baseRequest.setHandled( true );
+			final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+			xout.output( doc, response.getOutputStream() );
+//			xout.output( doc, System.out );
 		}
 		catch ( final Exception e )
 		{
 			throw new ServletException( e );
 		}
-		final Element root = doc.getRootElement();
-		final Element SequenceDescription = root.getChild( "SequenceDescription" );
-		final Element ImageLoader = SequenceDescription.getChild( "ImageLoader" );
 
-		ImageLoader.setAttribute( "format", "bdv.remote" );
 
-		ImageLoader.removeChild( "hdf5" );
-
-		final Element baseUrl = new Element( "baseUrl" );
-		baseUrl.setText( dataSetURL );
-		ImageLoader.setContent( baseUrl );
-
-		response.setContentType( "application/xml" );
-		response.setStatus( HttpServletResponse.SC_OK );
-		baseRequest.setHandled( true );
-		final PrintWriter ow = response.getWriter();
-		ow.write( new XMLOutputter().outputString( doc ) );
-		ow.close();
+//		final SAXBuilder sax = new SAXBuilder();
+//		Document doc;
+//		try
+//		{
+//			doc = sax.build( xmlFile );
+//		}
+//		catch ( final Exception e )
+//		{
+//			throw new ServletException( e );
+//		}
+//		final Element root = doc.getRootElement();
+//		final Element SequenceDescription = root.getChild( "SequenceDescription" );
+//		final Element ImageLoader = SequenceDescription.getChild( "ImageLoader" );
+//
+//		ImageLoader.setAttribute( "format", "bdv.remote" );
+//
+//		ImageLoader.removeChild( "hdf5" );
+//
+//		final Element baseUrl = new Element( "baseUrl" );
+//		baseUrl.setText( dataSetURL );
+//		ImageLoader.setContent( baseUrl );
+//
+//		response.setContentType( "application/xml" );
+//		response.setStatus( HttpServletResponse.SC_OK );
+//		baseRequest.setHandled( true );
+//		final PrintWriter ow = response.getWriter();
+//		ow.write( new XMLOutputter().outputString( doc ) );
+//		ow.close();
 	}
 }
