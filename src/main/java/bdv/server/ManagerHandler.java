@@ -1,13 +1,8 @@
 package bdv.server;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import mpicbg.spim.data.SpimDataException;
+import org.antlr.stringtemplate.StringTemplate;
+import org.antlr.stringtemplate.StringTemplateGroup;
 import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -22,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 
 public class ManagerHandler extends ContextHandler
@@ -38,7 +34,7 @@ public class ManagerHandler extends ContextHandler
 	
 	private final ConnectorStatistics connectorStats;
 
-	public ManagerHandler( String baseURL, Server server, ConnectorStatistics connectorStats, StatisticsHandler statHandler, ContextHandlerCollection handlers )
+	public ManagerHandler( String baseURL, Server server, ConnectorStatistics connectorStats, StatisticsHandler statHandler, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.baseURL = baseURL;
 		this.server = server;
@@ -92,34 +88,45 @@ public class ManagerHandler extends ContextHandler
 
 		final PrintWriter ow = response.getWriter();
 
-		ow.write( "<HTML>\n<HEAD><META HTTP-EQUIV=\"refresh\" CONTENT=\"5\"></HEAD>\n<BODY>" );
+		ow.write( getHtml() );
+		ow.close();
+	}
 
-		ow.write( "This page is refreshed in every 5 secs.<br/>\n" );
-		ow.write( "<br/>\n" );
-		ow.write( "Bytes sent total: " + getByteSizeString( statHandler.getResponsesBytesTotal() ) + "<br/>\n" );
+	private String getHtml()
+	{
+		// manager.st should be under {WorkingFolder}/templates/
+		StringTemplateGroup templates =
+				new StringTemplateGroup( "manager", "templates" );
 
-		// Refer: http://download.eclipse.org/jetty/9.2.6.v20141205/apidocs/org/eclipse/jetty/server/ConnectorStatistics.html
-		ow.write( String.format( "%,d Message/sec<br/>%n", connectorStats.getMessagesOutPerSecond() ) );
+		StringTemplate t = templates.getInstanceOf( "manager" );
 
-		ow.write( String.format( "Open connections = %,d<br/>%n", connectorStats.getConnectionsOpen() ) );
-		ow.write( String.format( "Max open connections = %,d<br/>%n", connectorStats.getConnectionsOpenMax() ) );
+		t.setAttribute( "bytesSent", getByteSizeString( statHandler.getResponsesBytesTotal() ) );
+		t.setAttribute( "msgPerSec", connectorStats.getMessagesOutPerSecond() );
+		t.setAttribute( "openConnections", connectorStats.getConnectionsOpen() );
+		t.setAttribute( "maxOpenConnections", connectorStats.getConnectionsOpenMax() );
 
-		ow.write( "<H1> Datasets: </H1>\n" );
+		t.setAttribute( "contexts", getContexts() );
 
-		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		t.setAttribute( "statHtml", statHandler.toStatsHTML() );
+
+		return t.toString();
+	}
+
+	private String getContexts()
+	{
+		StringBuilder sb = new StringBuilder();
+		for ( Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
 			if ( handler instanceof CellHandler )
 			{
+				sb.append( "<tr>\n<th>" );
 				contextHandler = ( CellHandler ) handler;
-				ow.write( contextHandler.getContextPath() + "<BR/>" );
+				sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
+				sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
 			}
 		}
-
-		ow.write( statHandler.toStatsHTML() );
-
-		ow.write( "</BODY>" );
-		ow.close();
+		return sb.toString();
 	}
 
 	private void deploy( final String datasetName, final String fileLocation, final Request baseRequest, final HttpServletResponse response ) throws IOException

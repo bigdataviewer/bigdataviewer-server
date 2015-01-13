@@ -1,23 +1,5 @@
 package bdv.server;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import mpicbg.spim.data.SpimDataException;
-import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
-import net.imglib2.realtransform.AffineTransform3D;
-
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.ContextHandler;
-import org.jdom2.Document;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-
 import bdv.img.cache.CacheHints;
 import bdv.img.cache.LoadingStrategy;
 import bdv.img.cache.VolatileCell;
@@ -29,8 +11,22 @@ import bdv.img.remote.RemoteImageLoaderMetaData;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
-
 import com.google.gson.GsonBuilder;
+import mpicbg.spim.data.SpimDataException;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
+import net.imglib2.realtransform.AffineTransform3D;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.jdom2.Document;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 
 public class CellHandler extends ContextHandler
 {
@@ -149,7 +145,6 @@ public class CellHandler extends ContextHandler
 			throw new ServletException( e );
 		}
 
-
 //		final SAXBuilder sax = new SAXBuilder();
 //		Document doc;
 //		try
@@ -178,5 +173,10 @@ public class CellHandler extends ContextHandler
 //		final PrintWriter ow = response.getWriter();
 //		ow.write( new XMLOutputter().outputString( doc ) );
 //		ow.close();
+	}
+
+	public String getXmlFile()
+	{
+		return xmlFile;
 	}
 }

@@ -1,7 +1,5 @@
 package bdv.server;
 
-import java.util.HashMap;
-
 import mpicbg.spim.data.SpimDataException;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectorStatistics;
@@ -13,6 +11,8 @@ import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+
+import java.util.HashMap;
 
 public class BigDataServer
 {
