@@ -3,13 +3,15 @@ package bdv.server;
 import java.util.HashMap;
 
 import mpicbg.spim.data.SpimDataException;
-
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 public class BigDataServer
 {
@@ -26,10 +28,21 @@ public class BigDataServer
 
 		final int port = args.length > 1 ? Integer.parseInt( args[ 1 ] ) : 8080;
 		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
-		final Server server = new Server( port );
+
+		// Threadpool for multiple connections
+		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
+
+		// ServerConnector configuration
+		final ServerConnector connector = new ServerConnector( server );
+		connector.setHost( "localhost" );
+		connector.setPort( port );
+		LOG.info( "Set connectors: " + connector );
+		server.setConnectors( new Connector[] { connector } );
 
 		final String baseURL = "http://" + server.getURI().getHost() + ":" + port;
+		LOG.info( "Server Base URL: " + baseURL );
 
+		// Handler initialization
 		final StatisticsHandler statHandler = new StatisticsHandler();
 
 		final HandlerCollection handlers = new HandlerCollection();
