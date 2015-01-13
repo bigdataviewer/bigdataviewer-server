@@ -13,8 +13,16 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.DecimalFormat;
 
 public class ManagerHandler extends ContextHandler
 {
@@ -23,14 +31,17 @@ public class ManagerHandler extends ContextHandler
 	private final String baseURL;
 
 	private final Server server;
+	
+	private final ContextHandlerCollection handlers;
+	
+	private final StatisticsHandler statHandler;
 
-	private final HandlerCollection handlers;
-
-	public ManagerHandler( final String baseURL, final Server server, final HandlerCollection handlers )
+	public ManagerHandler( String baseURL, Server server, StatisticsHandler statHandler, ContextHandlerCollection handlers )
 	{
 		this.baseURL = baseURL;
 		this.server = server;
 		this.handlers = handlers;
+		this.statHandler = statHandler;
 		setContextPath( "/manager" );
 	}
 
@@ -61,6 +72,15 @@ public class ManagerHandler extends ContextHandler
 
 	}
 
+	public String getByteSizeString( long size )
+	{
+		if ( size <= 0 )
+			return "0";
+		final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+		int digitGroups = ( int ) ( Math.log10( size ) / Math.log10( 1024 ) );
+		return new DecimalFormat( "#,##0.#" ).format( size / Math.pow( 1024, digitGroups ) ) + " " + units[ digitGroups ];
+	}
+
 	private void list( final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
 		response.setContentType( "text/html" );
@@ -69,16 +89,27 @@ public class ManagerHandler extends ContextHandler
 
 		final PrintWriter ow = response.getWriter();
 
+		ow.write( "<HTML>\n<HEAD><META HTTP-EQUIV=\"refresh\" CONTENT=\"5\"></HEAD>\n<BODY>" );
+
+		ow.write( "This page is refreshed in every 5 secs.<br/>\n" );
+		ow.write( "<br/>\n" );
+		ow.write( "Bytes sent total: " + getByteSizeString( statHandler.getResponsesBytesTotal() ) + "<br/>\n" );
+
+		ow.write( "<H1> Datasets: </H1>\n" );
+
 		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
 			if ( handler instanceof CellHandler )
 			{
 				contextHandler = ( CellHandler ) handler;
-				ow.write( contextHandler.getContextPath() );
+				ow.write( contextHandler.getContextPath() + "<BR/>" );
 			}
 		}
 
+		ow.write( statHandler.toStatsHTML() );
+
+		ow.write( "</BODY>" );
 		ow.close();
 	}
 

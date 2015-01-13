@@ -5,7 +5,10 @@ import java.util.HashMap;
 import mpicbg.spim.data.SpimDataException;
 
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
 
 public class BigDataServer
@@ -19,6 +22,7 @@ public class BigDataServer
 		final String fn = args.length > 0 ? args[ 0 ] : "/Users/moon/Projects/git-projects/BigDataViewer/data/HisYFP-SPIM.xml";
 
 		dataSet.put( "HisYFP-SPIM", fn );
+		dataSet.put( "t1-head", "/Users/moon/Projects/git-projects/BigDataViewer/data/t1-head.xml" );
 
 		final int port = args.length > 1 ? Integer.parseInt( args[ 1 ] ) : 8080;
 		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
@@ -26,19 +30,27 @@ public class BigDataServer
 
 		final String baseURL = "http://" + server.getURI().getHost() + ":" + port;
 
-		final HandlerCollection handlers = createHandlers( baseURL, dataSet );
-		handlers.addHandler( new ManagerHandler( baseURL, server, handlers ) );
+		final StatisticsHandler statHandler = new StatisticsHandler();
 
-		LOG.info( "Set handler: " + handlers );
-		server.setHandler( handlers );
+		final HandlerCollection handlers = new HandlerCollection();
+
+		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, dataSet );
+		handlers.addHandler( datasetHandlers );
+		handlers.addHandler( new ManagerHandler( baseURL, server, statHandler, datasetHandlers ) );
+		handlers.addHandler( new RequestLogHandler() );
+
+		statHandler.setHandler( handlers );
+
+		LOG.info( "Set handler: " + statHandler );
+		server.setHandler( statHandler );
 		LOG.info( "BigDataServer starting" );
 		server.start();
 		server.join();
 	}
 
-	static private HandlerCollection createHandlers( final String baseURL, final HashMap< String, String > dataSet ) throws SpimDataException
+	static private ContextHandlerCollection createHandlers( String baseURL, HashMap< String, String > dataSet ) throws SpimDataException
 	{
-		final HandlerCollection handlers = new HandlerCollection( true );
+		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
 		for ( final String key : dataSet.keySet() )
 		{
