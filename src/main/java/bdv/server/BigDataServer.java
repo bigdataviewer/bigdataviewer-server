@@ -4,6 +4,7 @@ import java.util.HashMap;
 
 import mpicbg.spim.data.SpimDataException;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
@@ -39,6 +40,10 @@ public class BigDataServer
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
 
+		// Add Statistics bean to the connector
+		final ConnectorStatistics connectorStats = new ConnectorStatistics();
+		connector.addBean( connectorStats );
+
 		final String baseURL = "http://" + server.getURI().getHost() + ":" + port;
 		LOG.info( "Server Base URL: " + baseURL );
 
@@ -49,7 +54,7 @@ public class BigDataServer
 
 		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, dataSet );
 		handlers.addHandler( datasetHandlers );
-		handlers.addHandler( new ManagerHandler( baseURL, server, statHandler, datasetHandlers ) );
+		handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers ) );
 		handlers.addHandler( new RequestLogHandler() );
 
 		statHandler.setHandler( handlers );

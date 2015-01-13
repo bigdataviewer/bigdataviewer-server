@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import mpicbg.spim.data.SpimDataException;
-
+import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -35,13 +35,16 @@ public class ManagerHandler extends ContextHandler
 	private final ContextHandlerCollection handlers;
 	
 	private final StatisticsHandler statHandler;
+	
+	private final ConnectorStatistics connectorStats;
 
-	public ManagerHandler( String baseURL, Server server, StatisticsHandler statHandler, ContextHandlerCollection handlers )
+	public ManagerHandler( String baseURL, Server server, ConnectorStatistics connectorStats, StatisticsHandler statHandler, ContextHandlerCollection handlers )
 	{
 		this.baseURL = baseURL;
 		this.server = server;
 		this.handlers = handlers;
 		this.statHandler = statHandler;
+		this.connectorStats = connectorStats;
 		setContextPath( "/manager" );
 	}
 
@@ -94,6 +97,12 @@ public class ManagerHandler extends ContextHandler
 		ow.write( "This page is refreshed in every 5 secs.<br/>\n" );
 		ow.write( "<br/>\n" );
 		ow.write( "Bytes sent total: " + getByteSizeString( statHandler.getResponsesBytesTotal() ) + "<br/>\n" );
+
+		// Refer: http://download.eclipse.org/jetty/9.2.6.v20141205/apidocs/org/eclipse/jetty/server/ConnectorStatistics.html
+		ow.write( String.format( "%,d Message/sec<br/>%n", connectorStats.getMessagesOutPerSecond() ) );
+
+		ow.write( String.format( "Open connections = %,d<br/>%n", connectorStats.getConnectionsOpen() ) );
+		ow.write( String.format( "Max open connections = %,d<br/>%n", connectorStats.getConnectionsOpenMax() ) );
 
 		ow.write( "<H1> Datasets: </H1>\n" );
 
