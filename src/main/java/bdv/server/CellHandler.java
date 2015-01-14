@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 
 public class CellHandler extends ContextHandler
 {
@@ -41,6 +42,9 @@ public class CellHandler extends ContextHandler
 	private final String xmlFile;
 
 	private final String dataSetURL;
+
+	// Cached XML string for provideXML()
+	private String remoteXmlString = null;
 
 	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException
 	{
@@ -122,57 +126,37 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
-	// TODO: create the remote xml file only once and keep it ready as a String
 	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		try
+		if ( null == remoteXmlString )
 		{
-			final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
-			final SpimDataMinimal spimData = io.load( xmlFile );
-			final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
-			seq.setImgLoader( new RemoteImageLoader( dataSetURL ) );
-			final Document doc = new Document( io.toXml( spimData, spimData.getBasePath() ) );
+			try
+			{
+				final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
+				final SpimDataMinimal spimData = io.load( xmlFile );
+				final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
+				seq.setImgLoader( new RemoteImageLoader( dataSetURL ) );
+				final Document doc = new Document( io.toXml( spimData, spimData.getBasePath() ) );
+				final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
 
-			response.setContentType( "application/xml" );
-			response.setStatus( HttpServletResponse.SC_OK );
-			baseRequest.setHandled( true );
-			final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
-			xout.output( doc, response.getOutputStream() );
-//			xout.output( doc, System.out );
-		}
-		catch ( final Exception e )
-		{
-			throw new ServletException( e );
+				final StringWriter sw = new StringWriter();
+				xout.output( doc, sw );
+				remoteXmlString = sw.toString();
+			}
+			catch ( final SpimDataException e )
+			{
+				throw new ServletException( e );
+			}
+
 		}
 
-//		final SAXBuilder sax = new SAXBuilder();
-//		Document doc;
-//		try
-//		{
-//			doc = sax.build( xmlFile );
-//		}
-//		catch ( final Exception e )
-//		{
-//			throw new ServletException( e );
-//		}
-//		final Element root = doc.getRootElement();
-//		final Element SequenceDescription = root.getChild( "SequenceDescription" );
-//		final Element ImageLoader = SequenceDescription.getChild( "ImageLoader" );
-//
-//		ImageLoader.setAttribute( "format", "bdv.remote" );
-//
-//		ImageLoader.removeChild( "hdf5" );
-//
-//		final Element baseUrl = new Element( "baseUrl" );
-//		baseUrl.setText( dataSetURL );
-//		ImageLoader.setContent( baseUrl );
-//
-//		response.setContentType( "application/xml" );
-//		response.setStatus( HttpServletResponse.SC_OK );
-//		baseRequest.setHandled( true );
-//		final PrintWriter ow = response.getWriter();
-//		ow.write( new XMLOutputter().outputString( doc ) );
-//		ow.close();
+		response.setContentType( "application/xml" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final PrintWriter ow = response.getWriter();
+		ow.write( remoteXmlString );
+		ow.close();
 	}
 
 	public String getXmlFile()
