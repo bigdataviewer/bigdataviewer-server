@@ -66,7 +66,7 @@ public class BigDataServer
 		server.join();
 	}
 
-	static private ContextHandlerCollection createHandlers( String baseURL, HashMap< String, String > dataSet ) throws SpimDataException
+	static private ContextHandlerCollection createHandlers( final String baseURL, final HashMap< String, String > dataSet ) throws SpimDataException
 	{
 		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 

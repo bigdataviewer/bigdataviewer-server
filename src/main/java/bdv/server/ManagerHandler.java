@@ -34,7 +34,7 @@ public class ManagerHandler extends ContextHandler
 	
 	private final ConnectorStatistics connectorStats;
 
-	public ManagerHandler( String baseURL, Server server, ConnectorStatistics connectorStats, StatisticsHandler statHandler, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	public ManagerHandler( final String baseURL, final Server server, final ConnectorStatistics connectorStats, final StatisticsHandler statHandler, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.baseURL = baseURL;
 		this.server = server;
@@ -115,7 +115,7 @@ public class ManagerHandler extends ContextHandler
 	private String getContexts()
 	{
 		StringBuilder sb = new StringBuilder();
-		for ( Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
 			if ( handler instanceof CellHandler )
