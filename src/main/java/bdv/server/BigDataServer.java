@@ -1,125 +1,83 @@
 package bdv.server;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import mpicbg.spim.data.SpimDataException;
-import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
-import net.imglib2.realtransform.AffineTransform3D;
-
-import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
-import bdv.img.cache.CacheHints;
-import bdv.img.cache.LoadingStrategy;
-import bdv.img.cache.VolatileCell;
-import bdv.img.cache.VolatileGlobalCellCache;
-import bdv.img.hdf5.Hdf5ImageLoader;
-import bdv.img.remote.AffineTransform3DJsonSerializer;
-import bdv.img.remote.RemoteImageLoaderMetaData;
-import bdv.spimdata.SequenceDescriptionMinimal;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.XmlIoSpimDataMinimal;
-
-import com.google.gson.GsonBuilder;
+import java.util.HashMap;
 
 public class BigDataServer
 {
+	static HashMap< String, String > dataSet = new HashMap<>();
+
+	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( BigDataServer.class );
+
 	public static void main( final String[] args ) throws Exception
 	{
-		final String fn = args.length > 0 ? args[ 0 ] : "/Users/pietzsch/Desktop/data/fibsem.xml";
+		final String fn = args.length > 0 ? args[ 0 ] : "/Users/moon/Projects/git-projects/BigDataViewer/data/HisYFP-SPIM.xml";
+
+		dataSet.put( "HisYFP-SPIM", fn );
+		dataSet.put( "t1-head", "/Users/moon/Projects/git-projects/BigDataViewer/data/t1-head.xml" );
+
 		final int port = args.length > 1 ? Integer.parseInt( args[ 1 ] ) : 8080;
 		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
-		final Server server = new Server( port );
-		server.setHandler( new CellHandler( fn ) );
+
+		// Threadpool for multiple connections
+		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
+
+		// ServerConnector configuration
+		final ServerConnector connector = new ServerConnector( server );
+		connector.setHost( "localhost" );
+		connector.setPort( port );
+		LOG.info( "Set connectors: " + connector );
+		server.setConnectors( new Connector[] { connector } );
+
+		// Add Statistics bean to the connector
+		final ConnectorStatistics connectorStats = new ConnectorStatistics();
+		connector.addBean( connectorStats );
+
+		final String baseURL = "http://" + server.getURI().getHost() + ":" + port;
+		LOG.info( "Server Base URL: " + baseURL );
+
+		// Handler initialization
+		final StatisticsHandler statHandler = new StatisticsHandler();
+
+		final HandlerCollection handlers = new HandlerCollection();
+
+		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, dataSet );
+		handlers.addHandler( datasetHandlers );
+		handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers ) );
+		handlers.addHandler( new RequestLogHandler() );
+
+		statHandler.setHandler( handlers );
+
+		LOG.info( "Set handler: " + statHandler );
+		server.setHandler( statHandler );
+		LOG.info( "BigDataServer starting" );
 		server.start();
 		server.join();
 	}
 
-	static class CellHandler extends AbstractHandler
+	static private ContextHandlerCollection createHandlers( final String baseURL, final HashMap< String, String > dataSet ) throws SpimDataException
 	{
-		private final VolatileGlobalCellCache< VolatileShortArray > cache;
+		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
-		private final String metadataJson;
-
-		private final RemoteImageLoaderMetaData metadata;
-
-		private final CacheHints cacheHints;
-
-		public CellHandler( final String xmlFilename ) throws SpimDataException
+		for ( final String key : dataSet.keySet() )
 		{
-			final SpimDataMinimal spimData = new XmlIoSpimDataMinimal().load( xmlFilename );
-			final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
-			final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
-			cache = imgLoader.getCache();
-			metadata = new RemoteImageLoaderMetaData( imgLoader, seq );
-
-			final GsonBuilder gsonBuilder = new GsonBuilder();
-			gsonBuilder.registerTypeAdapter( AffineTransform3D.class, new AffineTransform3DJsonSerializer() );
-			gsonBuilder.enableComplexMapKeySerialization();
-			metadataJson = gsonBuilder.create().toJson( metadata );
-			cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
+			final String context = "/" + key;
+			final CellHandler ctx = new CellHandler( baseURL + context + "/", dataSet.get( key ) );
+			ctx.setContextPath( context );
+			handlers.addHandler( ctx );
 		}
 
-		@Override
-		public void handle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
-		{
-			final String cellString = request.getParameter( "p" );
-			if ( cellString == null )
-				return;
-			final String[] parts = cellString.split( "/" );
-			if ( parts[ 0 ].equals( "cell" ) )
-			{
-				final int index = Integer.parseInt( parts[ 1 ] );
-				final int timepoint = Integer.parseInt( parts[ 2 ] );
-				final int setup = Integer.parseInt( parts[ 3 ] );
-				final int level = Integer.parseInt( parts[ 4 ] );
-				VolatileCell< VolatileShortArray > cell = cache.getGlobalIfCached( timepoint, setup, level, index, cacheHints );
-				if ( cell == null )
-				{
-					final int[] cellDims = new int[] {
-							Integer.parseInt( parts[ 5 ] ),
-							Integer.parseInt( parts[ 6 ] ),
-							Integer.parseInt( parts[ 7 ] ) };
-					final long[] cellMin = new long[] {
-							Long.parseLong( parts[ 8 ] ),
-							Long.parseLong( parts[ 9 ] ),
-							Long.parseLong( parts[ 10 ] ) };
-					cell = cache.createGlobal( cellDims, cellMin, timepoint, setup, level, index, cacheHints );
-				}
-
-				final short[] data = cell.getData().getCurrentStorageArray();
-				final byte[] buf = new byte[ 2 * data.length ];
-				for ( int i = 0, j = 0; i < data.length; i++ )
-				{
-					final short s = data[ i ];
-					buf[ j++ ] = ( byte ) ( ( s >> 8 ) & 0xff );
-					buf[ j++ ] = ( byte ) ( s & 0xff );
-				}
-
-				response.setContentType( "application/octet-stream" );
-				response.setContentLength( buf.length );
-				response.setStatus( HttpServletResponse.SC_OK );
-				baseRequest.setHandled( true );
-				final OutputStream os = response.getOutputStream();
-				os.write( buf );
-				os.close();
-			}
-			else if ( parts[ 0 ].equals( "init" ) )
-			{
-				response.setContentType( "application/octet-stream" );
-				response.setStatus( HttpServletResponse.SC_OK );
-				baseRequest.setHandled( true );
-				final PrintWriter ow = response.getWriter();
-				ow.write( metadataJson );
-				ow.close();
-			}
-		}
+		return handlers;
 	}
 }
