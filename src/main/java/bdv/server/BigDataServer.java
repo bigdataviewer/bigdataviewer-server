@@ -1,6 +1,8 @@
 package bdv.server;
 
 import mpicbg.spim.data.SpimDataException;
+import org.apache.commons.cli.*;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Server;
@@ -12,7 +14,13 @@ import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 
 public class BigDataServer
 {
@@ -20,14 +28,15 @@ public class BigDataServer
 
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( BigDataServer.class );
 
+	static int port;
+
+	static String serverName;
+
 	public static void main( final String[] args ) throws Exception
 	{
-		final String fn = args.length > 0 ? args[ 0 ] : "/Users/moon/Projects/git-projects/BigDataViewer/data/HisYFP-SPIM.xml";
+		if ( !processOptions( args ) )
+			return;
 
-		dataSet.put( "HisYFP-SPIM", fn );
-		dataSet.put( "t1-head", "/Users/moon/Projects/git-projects/BigDataViewer/data/t1-head.xml" );
-
-		final int port = args.length > 1 ? Integer.parseInt( args[ 1 ] ) : 8080;
 		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
 
 		// Threadpool for multiple connections
@@ -64,6 +73,99 @@ public class BigDataServer
 		LOG.info( "BigDataServer starting" );
 		server.start();
 		server.join();
+	}
+
+	static private boolean processOptions( String[] args ) throws ParseException, IOException
+	{
+		// create Options object
+		Options options = new Options();
+
+		// add p option
+		options.addOption( "p", true, "listening port" );
+
+		// add s baseurl
+		options.addOption( "s", true, "server name" );
+
+		// -d or multiple {name name.xml} pairs
+		options.addOption( "d", true, "dataset file" );
+
+		CommandLineParser parser = new BasicParser();
+		CommandLine cmd = parser.parse( options, args );
+
+		// Getting port number option
+		String portString = cmd.getOptionValue( "p", "8080" );
+		port = Integer.parseInt( portString );
+
+		// Getting server name option
+		String serverString = cmd.getOptionValue( "s", "localhost" );
+		serverName = serverString;
+
+		String datasetFile = cmd.getOptionValue( "d" );
+		if ( cmd.hasOption( "d" ) )
+		{
+			// process the file given with "-d"
+
+			// check the file presence
+			Path path = Paths.get( datasetFile );
+
+			if ( Files.notExists( path ) )
+			{
+				LOG.warn( "Dataset list file does not exist. Cannot start BigDataServer." );
+				return false;
+			}
+			else
+			{
+				// Process dataset list file
+				List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
+
+				for ( String str : lines )
+				{
+					String[] tokens = str.split( "\t" );
+					if ( StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
+					{
+						dataSet.put( tokens[ 0 ].trim(), tokens[ 1 ].trim() );
+						LOG.info( "Dataset added: {" + tokens[ 0 ].trim() + ", " + tokens[ 1 ].trim() + "}" );
+
+						if ( Files.notExists( Paths.get( tokens[ 1 ].trim() ) ) )
+						{
+							LOG.warn( "Dataset file does not exist: \"" + tokens[ 1 ].trim() + "\". Cannot start BigDataServer." );
+							return false;
+						}
+					}
+					else
+					{
+						LOG.warn( "Invalid dataset entry (will be skipped): {" + str + "}" );
+					}
+				}
+			}
+		}
+		else
+		{
+			String keyHolder = null;
+
+			// process {name, name.xml} pairs
+			for ( Object s : cmd.getArgList() )
+			{
+				if ( keyHolder != null )
+				{
+					dataSet.put( keyHolder, s.toString() );
+					LOG.info( "Dataset added: {" + keyHolder + ", " + s.toString() + "}" );
+					keyHolder = null;
+				}
+				else
+				{
+					keyHolder = s.toString();
+				}
+			}
+
+			if ( keyHolder != null )
+			{
+				LOG.warn( "Dataset list has an error while processing. Cannot start BigDataServer." );
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	static private ContextHandlerCollection createHandlers( final String baseURL, final HashMap< String, String > dataSet ) throws SpimDataException
