@@ -44,7 +44,7 @@ public class BigDataServer
 
 		// ServerConnector configuration
 		final ServerConnector connector = new ServerConnector( server );
-		connector.setHost( "localhost" );
+		connector.setHost( serverName );
 		connector.setPort( port );
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
