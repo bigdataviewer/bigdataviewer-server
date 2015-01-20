@@ -20,6 +20,7 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.jdom2.Document;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -151,6 +152,7 @@ public class CellHandler extends ContextHandler
 		}
 
 		response.setContentType( "application/xml" );
+		response.setCharacterEncoding( "UTF-8" );
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
 
@@ -162,5 +164,20 @@ public class CellHandler extends ContextHandler
 	public String getXmlFile()
 	{
 		return xmlFile;
+	}
+
+	public String getDataSetURL()
+	{
+		return dataSetURL;
+	}
+
+	public String getThumbnailUrl()
+	{
+		throw new NotImplementedException();
+	}
+
+	public String getDescription()
+	{
+		throw new NotImplementedException();
 	}
 }
