@@ -18,6 +18,8 @@ import net.imglib2.realtransform.AffineTransform3D;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.jdom2.Document;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -47,6 +49,10 @@ public class CellHandler extends ContextHandler
 	// Cached XML string for provideXML()
 	private String remoteXmlString = null;
 
+	// Cached XML string for provideXML()
+	private boolean remoteSettingsChecked = false;
+	private String remoteSettingsString = null;
+
 	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException
 	{
 		final SpimDataMinimal spimData = new XmlIoSpimDataMinimal().load( xmlFilename );
@@ -70,6 +76,12 @@ public class CellHandler extends ContextHandler
 	@Override
 	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
 	{
+		if(target.equals( "/settings" ))
+		{
+			provideSettings( baseRequest, response );
+			return;
+		}
+
 		final String cellString = request.getParameter( "p" );
 
 		if ( cellString == null )
@@ -159,6 +171,58 @@ public class CellHandler extends ContextHandler
 		final PrintWriter ow = response.getWriter();
 		ow.write( remoteXmlString );
 		ow.close();
+	}
+
+	public void provideSettings( final Request baseRequest, final HttpServletResponse response )
+	{
+		// Just check it once
+		if ( !remoteSettingsChecked )
+		{
+			remoteSettingsChecked = true;
+
+			try
+			{
+				final SAXBuilder sax = new SAXBuilder();
+
+				final String settings = xmlFile.substring( 0, xmlFile.length() - ".xml".length() ) + ".settings" + ".xml";
+
+				final Document doc = sax.build( settings );
+				final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+
+				final StringWriter sw = new StringWriter();
+				xout.output( doc, sw );
+				remoteSettingsString = sw.toString();
+			}
+			catch ( JDOMException e )
+			{
+				return;
+			}
+			catch ( IOException e )
+			{
+				return;
+			}
+		}
+
+		// If the setting is loaded, the context is stored in remoteSettingsString
+		// Otherwise, it leaves as null.
+		if(remoteSettingsString == null)
+			return;
+
+		response.setContentType( "application/xml" );
+		response.setCharacterEncoding( "UTF-8" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		try
+		{
+			final PrintWriter ow = response.getWriter();
+			ow.write( remoteSettingsString );
+			ow.close();
+		}
+		catch ( IOException e )
+		{
+			return;
+		}
 	}
 
 	public String getXmlFile()
