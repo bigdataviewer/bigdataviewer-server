@@ -15,6 +15,7 @@ import org.eclipse.jetty.util.log.Log;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
@@ -33,6 +34,12 @@ public class ManagerHandler extends ContextHandler
 	private final StatisticsHandler statHandler;
 	
 	private final ConnectorStatistics connectorStats;
+
+	private String contexts = null;
+
+	private int noDataSets = 0;
+
+	private long sizeDataSets = 0;
 
 	public ManagerHandler( final String baseURL, final Server server, final ConnectorStatistics connectorStats, final StatisticsHandler statHandler, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
@@ -105,28 +112,41 @@ public class ManagerHandler extends ContextHandler
 		t.setAttribute( "openConnections", connectorStats.getConnectionsOpen() );
 		t.setAttribute( "maxOpenConnections", connectorStats.getConnectionsOpenMax() );
 
-		t.setAttribute( "contexts", getContexts() );
+		getContexts();
+
+		t.setAttribute( "contexts", contexts );
+
+		t.setAttribute( "noDataSets", noDataSets );
+		t.setAttribute( "sizeDataSets", getByteSizeString( sizeDataSets ) );
 
 		t.setAttribute( "statHtml", statHandler.toStatsHTML() );
 
 		return t.toString();
 	}
 
-	private String getContexts()
+	private void getContexts()
 	{
-		StringBuilder sb = new StringBuilder();
-		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		if ( contexts == null )
 		{
-			CellHandler contextHandler = null;
-			if ( handler instanceof CellHandler )
+			noDataSets = 0;
+			sizeDataSets = 0;
+
+			StringBuilder sb = new StringBuilder();
+			for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 			{
-				sb.append( "<tr>\n<th>" );
-				contextHandler = ( CellHandler ) handler;
-				sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
-				sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
+				CellHandler contextHandler = null;
+				if ( handler instanceof CellHandler )
+				{
+					sb.append( "<tr>\n<th>" );
+					contextHandler = ( CellHandler ) handler;
+					sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
+					sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
+					noDataSets++;
+					sizeDataSets += new File( contextHandler.getXmlFile().replace( ".xml", ".h5" ) ).length();
+				}
 			}
+			contexts = sb.toString();
 		}
-		return sb.toString();
 	}
 
 	private void deploy( final String datasetName, final String fileLocation, final Request baseRequest, final HttpServletResponse response ) throws IOException

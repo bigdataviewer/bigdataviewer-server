@@ -43,6 +43,14 @@ This page is refreshed in every 5 secs.<br/>
             <th>Max open connections:</th>
             <td>$maxOpenConnections$</td>
         </tr>
+        <tr>
+            <th>Number of datasets:</th>
+            <td>$noDataSets$</td>
+        </tr>
+        <tr>
+            <th>Total size of datasets:</th>
+            <td>$sizeDataSets$</td>
+        </tr>
     </table>
 
     <hr>
