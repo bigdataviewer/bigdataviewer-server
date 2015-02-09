@@ -86,8 +86,7 @@ public class JsonHandler extends ContextHandler
 				//writer.name( "desc" ).value( contextHandler.getDescription() );
 				writer.name( "description" ).value( "NotImplemented" );
 
-				//writer.name( "thumbnailUrl" ).value( contextHandler.getThumbnailUrl() );
-				writer.name( "thumbnailUrl" ).value( "http://fiji.sc/_images/a/ae/Fiji-icon.png" );
+				writer.name( "thumbnailUrl" ).value( contextHandler.getThumbnailUrl() );
 
 				writer.name( "datasetUrl" ).value( contextHandler.getDataSetURL() );
 

@@ -11,6 +11,7 @@ import bdv.img.remote.RemoteImageLoaderMetaData;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
+import bdv.util.Thumbnail;
 import com.google.gson.GsonBuilder;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
@@ -24,13 +25,12 @@ import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.awt.image.BufferedImage;
+import java.io.*;
 
 public class CellHandler extends ContextHandler
 {
@@ -79,6 +79,12 @@ public class CellHandler extends ContextHandler
 		if(target.equals( "/settings" ))
 		{
 			provideSettings( baseRequest, response );
+			return;
+		}
+
+		if ( target.equals( "/png" ) )
+		{
+			provideThumbnail( baseRequest, response );
 			return;
 		}
 
@@ -225,6 +231,51 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
+	public void provideThumbnail( final Request baseRequest, final HttpServletResponse response )
+	{
+		// Just check it once
+		File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
+
+		if ( pngFile.exists() )
+		{
+			byte[] imageData = null;
+			try
+			{
+				BufferedImage image = ImageIO.read( pngFile );
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				ImageIO.write( image, "png", baos );
+				imageData = baos.toByteArray();
+			}
+			catch ( IOException e )
+			{
+				e.printStackTrace();
+			}
+
+			if ( imageData != null )
+			{
+				response.setContentType( "image/png" );
+				response.setContentLength( imageData.length );
+				response.setStatus( HttpServletResponse.SC_OK );
+				baseRequest.setHandled( true );
+
+				try
+				{
+					final OutputStream os = response.getOutputStream();
+					os.write( imageData );
+					os.close();
+				}
+				catch ( IOException e )
+				{
+					return;
+				}
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+
 	public String getXmlFile()
 	{
 		return xmlFile;
@@ -237,7 +288,22 @@ public class CellHandler extends ContextHandler
 
 	public String getThumbnailUrl()
 	{
-		throw new NotImplementedException();
+		File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
+		if ( pngFile.exists() )
+			return dataSetURL + "png";
+
+		// No thumbnail
+		// Trigger to generate thumbnail here
+		try
+		{
+			Thumbnail thumb = new Thumbnail( xmlFile, 800, 600 );
+		}
+		catch ( final Exception e )
+		{
+			e.printStackTrace();
+		}
+
+		return dataSetURL + "png";
 	}
 
 	public String getDescription()
