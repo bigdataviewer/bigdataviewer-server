@@ -16,29 +16,18 @@
 	<description>A web server for BigDataViewer datasets</description>
 
 	<properties>
-		<!-- FIXME we need to set enforcer.skip to avoid hecking for java 1.6 compatibility. 
-			But we do not want to turn of all the other checks! -->
-		<enforcer.skip>true</enforcer.skip>
+		<scijava.jvm.version>1.7</scijava.jvm.version>
 	</properties>
 
-	<build>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>2.5</version>
-				</plugin>
-			</plugins>
-		</pluginManagement>
+ 	<build>
 		<plugins>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
-				</configuration>
-			</plugin>
+	        <plugin>
+	          <artifactId>maven-compiler-plugin</artifactId>
+	          <configuration>
+	            <source>1.7</source>
+	            <target>1.7</target>
+	          </configuration>
+	        </plugin>
 		</plugins>
 	</build>
 
