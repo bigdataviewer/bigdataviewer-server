@@ -25,7 +25,7 @@ public class JsonHandler extends ContextHandler
 	public JsonHandler( final Server server, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.server = server;
-		setContextPath( "/json" );
+		setContextPath( "/" + Constants.DATASETLIST_CONTEXT_NAME );
 	}
 
 	@Override

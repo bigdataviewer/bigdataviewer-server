@@ -256,6 +256,9 @@ public class BigDataServer
 
 	private static void tryAddDataset( final HashMap< String, String > datasetNameToXML, final String name, final String xmlpath ) throws IllegalArgumentException
 	{
+		for ( final String reserved : Constants.RESERVED_CONTEXT_NAMES )
+			if ( name.equals( reserved ) )
+				throw new IllegalArgumentException( "Cannot use dataset name: \"" + name + "\" (reserved for internal use)." );
 		if ( datasetNameToXML.containsKey( name ) )
 			throw new IllegalArgumentException( "Duplicate dataset name: \"" + name + "\"" );
 		if ( Files.notExists( Paths.get( xmlpath ) ) )

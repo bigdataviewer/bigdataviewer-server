@@ -1,6 +1,7 @@
 package bdv.server;
 
 import mpicbg.spim.data.SpimDataException;
+
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
 import org.eclipse.jetty.server.ConnectorStatistics;
@@ -15,6 +16,7 @@ import org.eclipse.jetty.util.log.Log;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -48,7 +50,7 @@ public class ManagerHandler extends ContextHandler
 		this.handlers = handlers;
 		this.statHandler = statHandler;
 		this.connectorStats = connectorStats;
-		setContextPath( "/manager" );
+		setContextPath( "/" + Constants.MANAGER_CONTEXT_NAME );
 	}
 
 	@Override
