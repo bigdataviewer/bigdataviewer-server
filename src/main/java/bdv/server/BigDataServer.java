@@ -1,6 +1,7 @@
 package bdv.server;
 
 import mpicbg.spim.data.SpimDataException;
+
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Connector;
@@ -15,37 +16,69 @@ import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+/**
+ * Serve XML/HDF5 datasets over HTTP.
+ *
+ * <pre>
+ * usage: BigDataServer [OPTIONS] [NAME XML]...
+ * Serves one or more XML/HDF5 datasets for remote access over HTTP.
+ * Provide (NAME XML) pairs on the command line or in a dataset file, where
+ * NAME is the name under which the dataset should be made accessible and XML
+ * is the path to the XML file of the dataset.
+ *  -d &lt;FILE&gt;       Dataset file: A plain text file specifying one dataset
+ *                  per line. Each line is formatted as "NAME &lt;TAB&gt; XML".
+ *  -p &lt;PORT&gt;       Listening port. (default: 8080)
+ *  -s &lt;HOSTNAME&gt;   Hostname of the server.
+ * </pre>
+ *
+ * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
+ * @author HongKee Moon <moon@mpi-cbg.de>
+ */
 public class BigDataServer
 {
-	static HashMap< String, String > dataSet = new HashMap<>();
-
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( BigDataServer.class );
 
-	static int port;
-
-	static String serverName;
+	static Parameters getDefaultParameters()
+	{
+		final int port = 8080;
+		String hostname;
+		try
+		{
+			hostname = InetAddress.getLocalHost().getHostName();
+		}
+		catch ( final UnknownHostException e )
+		{
+			hostname = "localhost";
+		}
+		return new Parameters( port, hostname, new HashMap< String, String >() );
+	}
 
 	public static void main( final String[] args ) throws Exception
 	{
-		if ( !processOptions( args ) )
-			return;
-
 		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
+
+		final Parameters params = processOptions( args, getDefaultParameters() );
+		if ( params == null )
+			return;
 
 		// Threadpool for multiple connections
 		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
 
 		// ServerConnector configuration
 		final ServerConnector connector = new ServerConnector( server );
-		connector.setHost( serverName );
-		connector.setPort( port );
+		connector.setHost( params.getHostname() );
+		connector.setPort( params.getPort() );
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
 
@@ -53,7 +86,7 @@ public class BigDataServer
 		final ConnectorStatistics connectorStats = new ConnectorStatistics();
 		connector.addBean( connectorStats );
 
-		final String baseURL = "http://" + server.getURI().getHost() + ":" + port;
+		final String baseURL = "http://" + server.getURI().getHost() + ":" + params.getPort();
 		LOG.info( "Server Base URL: " + baseURL );
 
 		// Handler initialization
@@ -61,7 +94,7 @@ public class BigDataServer
 
 		final HandlerCollection handlers = new HandlerCollection();
 
-		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, dataSet );
+		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, params.getDatasets() );
 		handlers.addHandler( datasetHandlers );
 		handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers ) );
 		handlers.addHandler( new RequestLogHandler() );
@@ -76,107 +109,171 @@ public class BigDataServer
 		server.join();
 	}
 
-	static private boolean processOptions( String[] args ) throws ParseException, IOException
+	/**
+	 * Server parameters: hostname, port, datasets.
+	 */
+	private static class Parameters
+	{
+		private final int port;
+
+		private final String hostname;
+
+		/**
+		 * maps from dataset name to dataset xml path.
+		 */
+		private final Map< String, String > datasetNameToXml;
+
+		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml )
+		{
+			this.port = port;
+			this.hostname = hostname;
+			this.datasetNameToXml = datasetNameToXml;
+		}
+
+		public int getPort()
+		{
+			return port;
+		}
+
+		public String getHostname()
+		{
+			return hostname;
+		}
+
+		/**
+		 * Get datasets.
+		 *
+		 * @return datasets as a map from dataset name to dataset xml path.
+		 */
+		public Map< String, String > getDatasets()
+		{
+			return datasetNameToXml;
+		}
+	}
+
+	@SuppressWarnings( "static-access" )
+	static private Parameters processOptions( final String[] args, final Parameters defaultParameters ) throws IOException
 	{
 		// create Options object
-		Options options = new Options();
+		final Options options = new Options();
 
-		// add p option
-		options.addOption( "p", true, "listening port" );
+		final String cmdLineSyntax = "BigDataServer [OPTIONS] [NAME XML]...";
 
-		// add s baseurl
-		options.addOption( "s", true, "server name" );
+		final String description =
+				"Serves one or more XML/HDF5 datasets for remote access over HTTP.\n" +
+						"Provide (NAME XML) pairs on the command line or in a dataset file, where NAME is the name under which the dataset should be made accessible and XML is the path to the XML file of the dataset.";
+
+		options.addOption( OptionBuilder
+				.withDescription( "Hostname of the server.\n(default: " + defaultParameters.getHostname() + ")" )
+				.hasArg()
+				.withArgName( "HOSTNAME" )
+				.create( "s" ) );
+
+		options.addOption( OptionBuilder
+				.withDescription( "Listening port.\n(default: " + defaultParameters.getPort() + ")" )
+				.hasArg()
+				.withArgName( "PORT" )
+				.create( "p" ) );
 
 		// -d or multiple {name name.xml} pairs
-		options.addOption( "d", true, "dataset file" );
+		options.addOption( OptionBuilder
+				.withDescription( "Dataset file: A plain text file specifying one dataset per line. Each line is formatted as \"NAME <TAB> XML\"." )
+				.hasArg()
+				.withArgName( "FILE" )
+				.create( "d" ) );
 
-		CommandLineParser parser = new BasicParser();
-		CommandLine cmd = parser.parse( options, args );
-
-		// Getting port number option
-		String portString = cmd.getOptionValue( "p", "8080" );
-		port = Integer.parseInt( portString );
-
-		// Getting server name option
-		String serverString = cmd.getOptionValue( "s", "localhost" );
-		serverName = serverString;
-
-		String datasetFile = cmd.getOptionValue( "d" );
-		if ( cmd.hasOption( "d" ) )
+		try
 		{
-			// process the file given with "-d"
+			final CommandLineParser parser = new BasicParser();
+			final CommandLine cmd = parser.parse( options, args );
 
-			// check the file presence
-			Path path = Paths.get( datasetFile );
+			// Getting port number option
+			final String portString = cmd.getOptionValue( "p", Integer.toString( defaultParameters.getPort() ) );
+			final int port = Integer.parseInt( portString );
 
-			if ( Files.notExists( path ) )
+			// Getting server name option
+			final String serverString = cmd.getOptionValue( "s", defaultParameters.getHostname() );
+			final String serverName = serverString;
+
+			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
+
+			if ( cmd.hasOption( "d" ) )
 			{
-				LOG.warn( "Dataset list file does not exist. Cannot start BigDataServer." );
-				return false;
-			}
-			else
-			{
+				// process the file given with "-d"
+				final String datasetFile = cmd.getOptionValue( "d" );
+
+				// check the file presence
+				final Path path = Paths.get( datasetFile );
+
+				if ( Files.notExists( path ) )
+					throw new IllegalArgumentException( "Dataset list file does not exist." );
+
 				// Process dataset list file
-				List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
+				final List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
 
-				for ( String str : lines )
+				for ( final String str : lines )
 				{
-					String[] tokens = str.split( "\t" );
-					if ( StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
+					final String[] tokens = str.split( "\t" );
+					if ( tokens.length == 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
 					{
-						dataSet.put( tokens[ 0 ].trim(), tokens[ 1 ].trim() );
-						LOG.info( "Dataset added: {" + tokens[ 0 ].trim() + ", " + tokens[ 1 ].trim() + "}" );
-
-						if ( Files.notExists( Paths.get( tokens[ 1 ].trim() ) ) )
-						{
-							LOG.warn( "Dataset file does not exist: \"" + tokens[ 1 ].trim() + "\". Cannot start BigDataServer." );
-							return false;
-						}
+						final String name = tokens[ 0 ].trim();
+						final String xmlpath = tokens[ 1 ].trim();
+						tryAddDataset( datasets, name, xmlpath );
 					}
 					else
 					{
-						LOG.warn( "Invalid dataset entry (will be skipped): {" + str + "}" );
+						LOG.warn( "Invalid dataset file line (will be skipped): {" + str + "}" );
 					}
 				}
 			}
+
+			// process additional {name, name.xml} pairs given on the
+			// command-line
+			final String[] leftoverArgs = cmd.getArgs();
+			if ( leftoverArgs.length % 2 != 0 )
+				throw new IllegalArgumentException( "Dataset list has an error while processing." );
+
+			for ( int i = 0; i < leftoverArgs.length; i += 2 )
+			{
+				final String name = leftoverArgs[ i ];
+				final String xmlpath = leftoverArgs[ i + 1 ];
+				tryAddDataset( datasets, name, xmlpath );
+			}
+
+			if ( datasets.isEmpty() )
+				throw new IllegalArgumentException( "Dataset list is empty." );
+
+			return new Parameters( port, serverName, datasets );
 		}
-		else
+		catch ( final ParseException | IllegalArgumentException e )
 		{
-			String keyHolder = null;
-
-			// process {name, name.xml} pairs
-			for ( Object s : cmd.getArgList() )
-			{
-				if ( keyHolder != null )
-				{
-					dataSet.put( keyHolder, s.toString() );
-					LOG.info( "Dataset added: {" + keyHolder + ", " + s.toString() + "}" );
-					keyHolder = null;
-				}
-				else
-				{
-					keyHolder = s.toString();
-				}
-			}
-
-			if ( keyHolder != null )
-			{
-				LOG.warn( "Dataset list has an error while processing. Cannot start BigDataServer." );
-				return false;
-			}
+			LOG.warn( e.getMessage() );
+			final HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp( cmdLineSyntax, description, options, null );
 		}
-
-		return true;
+		return null;
 	}
 
-	static private ContextHandlerCollection createHandlers( final String baseURL, final HashMap< String, String > dataSet ) throws SpimDataException
+	private static void tryAddDataset( final HashMap< String, String > datasetNameToXML, final String name, final String xmlpath ) throws IllegalArgumentException
+	{
+		if ( datasetNameToXML.containsKey( name ) )
+			throw new IllegalArgumentException( "Duplicate dataset name: \"" + name + "\"" );
+		if ( Files.notExists( Paths.get( xmlpath ) ) )
+			throw new IllegalArgumentException( "Dataset file does not exist: \"" + xmlpath + "\"" );
+		datasetNameToXML.put( name, xmlpath );
+		LOG.info( "Dataset added: {" + name + ", " + xmlpath + "}" );
+	}
+
+	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet ) throws SpimDataException
 	{
 		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
-		for ( final String key : dataSet.keySet() )
+		for ( final Entry< String, String > entry : dataSet.entrySet() )
 		{
-			final String context = "/" + key;
-			final CellHandler ctx = new CellHandler( baseURL + context + "/", dataSet.get( key ) );
+			final String name = entry.getKey();
+			final String xmlpath = entry.getValue();
+			final String context = "/" + name;
+			final CellHandler ctx = new CellHandler( baseURL + context + "/", xmlpath );
 			ctx.setContextPath( context );
 			handlers.addHandler( ctx );
 		}
