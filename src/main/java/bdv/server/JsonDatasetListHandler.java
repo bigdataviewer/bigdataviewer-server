@@ -18,11 +18,11 @@ import java.net.URISyntaxException;
  *
  * @author HongKee Moon <moon@mpi-cbg.de>
  */
-public class JsonHandler extends ContextHandler
+public class JsonDatasetListHandler extends ContextHandler
 {
 	private final Server server;
 
-	public JsonHandler( final Server server, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	public JsonDatasetListHandler( final Server server, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.server = server;
 		setContextPath( "/" + Constants.DATASETLIST_CONTEXT_NAME );

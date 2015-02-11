@@ -98,7 +98,7 @@ public class BigDataServer
 		handlers.addHandler( datasetHandlers );
 		handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers ) );
 		handlers.addHandler( new RequestLogHandler() );
-		handlers.addHandler( new JsonHandler( server, datasetHandlers ) );
+		handlers.addHandler( new JsonDatasetListHandler( server, datasetHandlers ) );
 
 		statHandler.setHandler( handlers );
 
