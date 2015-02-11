@@ -30,7 +30,6 @@ import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -98,7 +97,7 @@ public class CellHandler extends ContextHandler
 	}
 
 	@Override
-	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
+	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException
 	{
 		if ( target.equals( "/settings" ) )
 		{
@@ -169,7 +168,7 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
-	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException, ServletException
+	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
 		response.setContentType( "application/xml" );
 		response.setCharacterEncoding( "UTF-8" );
