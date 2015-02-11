@@ -1,5 +1,6 @@
 package bdv.server;
 
+import bdv.BigDataViewer;
 import bdv.img.cache.CacheHints;
 import bdv.img.cache.LoadingStrategy;
 import bdv.img.cache.VolatileCell;
@@ -54,25 +55,34 @@ public class CellHandler extends ContextHandler
 
 	private final String dataSetURL;
 
-	// Cached XML string for provideXML()
-	private String remoteXmlString = null;
+	/**
+	 * Cached dataset XML to be send to and opened by {@link BigDataViewer}
+	 * clients.
+	 */
+	private final String datasetXmlString;
+
+	/**
+	 * Cached JSON representation of the {@link RemoteImageLoaderMetaData} to be
+	 * send to clients.
+	 */
+	private final String metadataJson;
 
 	// Cached XML string for provideXML()
 	private boolean remoteSettingsChecked = false;
 
 	private String remoteSettingsString = null;
 
-	private final String metadataJson;
-
-	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException
+	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException, IOException
 	{
-		final SpimDataMinimal spimData = new XmlIoSpimDataMinimal().load( xmlFilename );
+		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
+		final SpimDataMinimal spimData = io.load( xmlFilename );
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
 		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
 		cache = imgLoader.getCache();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
 
+		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
 		metadataJson = buildMetadataJsonString( imgLoader, seq );
 
 		// dataSetURL property is used for providing the XML file by replace
@@ -156,35 +166,13 @@ public class CellHandler extends ContextHandler
 
 	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		if ( null == remoteXmlString )
-		{
-			try
-			{
-				final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
-				final SpimDataMinimal spimData = io.load( xmlFilename );
-				final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
-				seq.setImgLoader( new RemoteImageLoader( dataSetURL ) );
-				final Document doc = new Document( io.toXml( spimData, spimData.getBasePath() ) );
-				final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
-
-				final StringWriter sw = new StringWriter();
-				xout.output( doc, sw );
-				remoteXmlString = sw.toString();
-			}
-			catch ( final SpimDataException e )
-			{
-				throw new ServletException( e );
-			}
-
-		}
-
 		response.setContentType( "application/xml" );
 		response.setCharacterEncoding( "UTF-8" );
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
 
 		final PrintWriter ow = response.getWriter();
-		ow.write( remoteXmlString );
+		ow.write( datasetXmlString );
 		ow.close();
 	}
 
@@ -333,5 +321,19 @@ public class CellHandler extends ContextHandler
 		gsonBuilder.registerTypeAdapter( AffineTransform3D.class, new AffineTransform3DJsonSerializer() );
 		gsonBuilder.enableComplexMapKeySerialization();
 		return gsonBuilder.create().toJson( metadata );
+	}
+
+	/**
+	 * Create a modified dataset XML by replacing the ImageLoader with an
+	 * {@link RemoteImageLoader} pointing to the data we are serving.
+	 */
+	private static String buildRemoteDatasetXML( final XmlIoSpimDataMinimal io, final SpimDataMinimal spimData, final String baseUrl ) throws IOException, SpimDataException
+	{
+		final SpimDataMinimal s = new SpimDataMinimal( spimData, new RemoteImageLoader( baseUrl, false ) );
+		final Document doc = new Document( io.toXml( s, s.getBasePath() ) );
+		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+		final StringWriter sw = new StringWriter();
+		xout.output( doc, sw );
+		return sw.toString();
 	}
 }

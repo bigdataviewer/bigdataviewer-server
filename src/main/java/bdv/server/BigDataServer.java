@@ -264,7 +264,7 @@ public class BigDataServer
 		LOG.info( "Dataset added: {" + name + ", " + xmlpath + "}" );
 	}
 
-	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet ) throws SpimDataException
+	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet ) throws SpimDataException, IOException
 	{
 		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
