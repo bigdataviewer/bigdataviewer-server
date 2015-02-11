@@ -6,8 +6,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.util.log.Log;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,20 +14,17 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 
 /**
- * Created by moon on 1/19/15.
+ * Provides a list of available datasets on this {@link BigDataServer}
+ *
+ * @author HongKee Moon <moon@mpi-cbg.de>
  */
 public class JsonHandler extends ContextHandler
 {
-	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( JsonHandler.class );
-
 	private final Server server;
 
-	private final ContextHandlerCollection handlers;
-
-	public JsonHandler( final Server server, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	public JsonHandler( final Server server, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.server = server;
-		this.handlers = handlers;
 		setContextPath( "/json" );
 	}
 
@@ -50,9 +45,9 @@ public class JsonHandler extends ContextHandler
 		ow.close();
 	}
 
-	private void getJsonDatasetList( PrintWriter out ) throws IOException
+	private void getJsonDatasetList( final PrintWriter out ) throws IOException
 	{
-		JsonWriter writer = new JsonWriter( out );
+		final JsonWriter writer = new JsonWriter( out );
 
 		writer.setIndent( "\t" );
 
@@ -60,16 +55,16 @@ public class JsonHandler extends ContextHandler
 
 		getContexts( writer );
 
-		writer.endObject(); // }
+		writer.endObject();
 
 		writer.flush();
 
 		writer.close();
 	}
 
-	private String getContexts( JsonWriter writer ) throws IOException
+	private String getContexts( final JsonWriter writer ) throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
+		final StringBuilder sb = new StringBuilder();
 		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;

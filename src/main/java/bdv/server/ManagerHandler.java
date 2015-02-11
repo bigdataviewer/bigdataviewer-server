@@ -28,11 +28,11 @@ public class ManagerHandler extends ContextHandler
 	private final String baseURL;
 
 	private final Server server;
-	
+
 	private final ContextHandlerCollection handlers;
-	
+
 	private final StatisticsHandler statHandler;
-	
+
 	private final ConnectorStatistics connectorStats;
 
 	private String contexts = null;
@@ -41,7 +41,7 @@ public class ManagerHandler extends ContextHandler
 
 	private long sizeDataSets = 0;
 
-	public ManagerHandler( final String baseURL, final Server server, final ConnectorStatistics connectorStats, final StatisticsHandler statHandler, ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	public ManagerHandler( final String baseURL, final Server server, final ConnectorStatistics connectorStats, final StatisticsHandler statHandler, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
 	{
 		this.baseURL = baseURL;
 		this.server = server;
@@ -78,12 +78,12 @@ public class ManagerHandler extends ContextHandler
 
 	}
 
-	public String getByteSizeString( long size )
+	public String getByteSizeString( final long size )
 	{
 		if ( size <= 0 )
 			return "0";
 		final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
-		int digitGroups = ( int ) ( Math.log10( size ) / Math.log10( 1024 ) );
+		final int digitGroups = ( int ) ( Math.log10( size ) / Math.log10( 1024 ) );
 		return new DecimalFormat( "#,##0.#" ).format( size / Math.pow( 1024, digitGroups ) ) + " " + units[ digitGroups ];
 	}
 
@@ -102,10 +102,10 @@ public class ManagerHandler extends ContextHandler
 	private String getHtml()
 	{
 		// manager.st should be under {WorkingFolder}/templates/
-		StringTemplateGroup templates =
+		final StringTemplateGroup templates =
 				new StringTemplateGroup( "manager", "templates" );
 
-		StringTemplate t = templates.getInstanceOf( "manager" );
+		final StringTemplate t = templates.getInstanceOf( "manager" );
 
 		t.setAttribute( "bytesSent", getByteSizeString( statHandler.getResponsesBytesTotal() ) );
 		t.setAttribute( "msgPerSec", connectorStats.getMessagesOutPerSecond() );
@@ -131,7 +131,7 @@ public class ManagerHandler extends ContextHandler
 			noDataSets = 0;
 			sizeDataSets = 0;
 
-			StringBuilder sb = new StringBuilder();
+			final StringBuilder sb = new StringBuilder();
 			for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 			{
 				CellHandler contextHandler = null;
