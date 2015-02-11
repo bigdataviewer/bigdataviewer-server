@@ -51,6 +51,7 @@ public class CellHandler extends ContextHandler
 
 	// Cached XML string for provideXML()
 	private boolean remoteSettingsChecked = false;
+
 	private String remoteSettingsString = null;
 
 	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException
@@ -76,7 +77,7 @@ public class CellHandler extends ContextHandler
 	@Override
 	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		if(target.equals( "/settings" ))
+		if ( target.equals( "/settings" ) )
 		{
 			provideSettings( baseRequest, response );
 			return;
@@ -199,19 +200,20 @@ public class CellHandler extends ContextHandler
 				xout.output( doc, sw );
 				remoteSettingsString = sw.toString();
 			}
-			catch ( JDOMException e )
+			catch ( final JDOMException e )
 			{
 				return;
 			}
-			catch ( IOException e )
+			catch ( final IOException e )
 			{
 				return;
 			}
 		}
 
-		// If the setting is loaded, the context is stored in remoteSettingsString
+		// If the setting is loaded, the context is stored in
+		// remoteSettingsString
 		// Otherwise, it leaves as null.
-		if(remoteSettingsString == null)
+		if ( remoteSettingsString == null )
 			return;
 
 		response.setContentType( "application/xml" );
@@ -225,7 +227,7 @@ public class CellHandler extends ContextHandler
 			ow.write( remoteSettingsString );
 			ow.close();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			return;
 		}
@@ -234,19 +236,19 @@ public class CellHandler extends ContextHandler
 	public void provideThumbnail( final Request baseRequest, final HttpServletResponse response )
 	{
 		// Just check it once
-		File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
+		final File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
 
 		if ( pngFile.exists() )
 		{
 			byte[] imageData = null;
 			try
 			{
-				BufferedImage image = ImageIO.read( pngFile );
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				final BufferedImage image = ImageIO.read( pngFile );
+				final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				ImageIO.write( image, "png", baos );
 				imageData = baos.toByteArray();
 			}
-			catch ( IOException e )
+			catch ( final IOException e )
 			{
 				e.printStackTrace();
 			}
@@ -264,7 +266,7 @@ public class CellHandler extends ContextHandler
 					os.write( imageData );
 					os.close();
 				}
-				catch ( IOException e )
+				catch ( final IOException e )
 				{
 					return;
 				}
@@ -288,7 +290,7 @@ public class CellHandler extends ContextHandler
 
 	public String getThumbnailUrl()
 	{
-		File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
+		final File pngFile = new File( xmlFile.replace( ".xml", ".png" ) );
 		if ( pngFile.exists() )
 			return dataSetURL + "png";
 
@@ -296,7 +298,7 @@ public class CellHandler extends ContextHandler
 		// Trigger to generate thumbnail here
 		try
 		{
-			Thumbnail thumb = new Thumbnail( xmlFile, 800, 600 );
+			final Thumbnail thumb = new Thumbnail( xmlFile, 800, 600 );
 		}
 		catch ( final Exception e )
 		{
