@@ -101,7 +101,8 @@ public class CellHandler extends ContextHandler
 	{
 		if ( target.equals( "/settings" ) )
 		{
-			provideSettings( baseRequest, response );
+			if ( settingsXmlString != null )
+				respondWithString( baseRequest, response, "application/xml", settingsXmlString );
 			return;
 		}
 
@@ -115,7 +116,7 @@ public class CellHandler extends ContextHandler
 
 		if ( cellString == null )
 		{
-			provideXML( baseRequest, response );
+			respondWithString( baseRequest, response, "application/xml", datasetXmlString );
 			return;
 		}
 
@@ -159,41 +160,8 @@ public class CellHandler extends ContextHandler
 		}
 		else if ( parts[ 0 ].equals( "init" ) )
 		{
-			response.setContentType( "application/octet-stream" );
-			response.setStatus( HttpServletResponse.SC_OK );
-			baseRequest.setHandled( true );
-			final PrintWriter ow = response.getWriter();
-			ow.write( metadataJson );
-			ow.close();
+			respondWithString( baseRequest, response, "application/json", metadataJson );
 		}
-	}
-
-	public void provideXML( final Request baseRequest, final HttpServletResponse response ) throws IOException
-	{
-		response.setContentType( "application/xml" );
-		response.setCharacterEncoding( "UTF-8" );
-		response.setStatus( HttpServletResponse.SC_OK );
-		baseRequest.setHandled( true );
-
-		final PrintWriter ow = response.getWriter();
-		ow.write( datasetXmlString );
-		ow.close();
-	}
-
-	public void provideSettings( final Request baseRequest, final HttpServletResponse response ) throws IOException
-	{
-		if ( settingsXmlString == null )
-			// there is no settings.xml for the dataset
-			return;
-
-		response.setContentType( "application/xml" );
-		response.setCharacterEncoding( "UTF-8" );
-		response.setStatus( HttpServletResponse.SC_OK );
-		baseRequest.setHandled( true );
-
-		final PrintWriter ow = response.getWriter();
-		ow.write( settingsXmlString );
-		ow.close();
 	}
 
 	public void provideThumbnail( final Request baseRequest, final HttpServletResponse response )
@@ -331,5 +299,20 @@ public class CellHandler extends ContextHandler
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Handle request by sending a UTF-8 string.
+	 */
+	private static void respondWithString( final Request baseRequest, final HttpServletResponse response, final String contentType, final String string ) throws IOException
+	{
+		response.setContentType( contentType );
+		response.setCharacterEncoding( "UTF-8" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final PrintWriter ow = response.getWriter();
+		ow.write( string );
+		ow.close();
 	}
 }
