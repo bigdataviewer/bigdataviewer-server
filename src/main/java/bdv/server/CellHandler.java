@@ -22,6 +22,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.util.log.Log;
 import org.jdom2.Document;
 import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
@@ -38,6 +39,8 @@ import java.io.*;
 
 public class CellHandler extends ContextHandler
 {
+	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
+
 	private final VolatileGlobalCellCache< VolatileShortArray > cache;
 
 	private final CacheHints cacheHints;
@@ -67,10 +70,11 @@ public class CellHandler extends ContextHandler
 	 */
 	private final String metadataJson;
 
-	// Cached XML string for provideXML()
-	private boolean remoteSettingsChecked = false;
-
-	private String remoteSettingsString = null;
+	/**
+	 * Cached dataset.settings XML to be send to clients. May be null if no
+	 * settings file exists for the dataset.
+	 */
+	private final String settingsXmlString;
 
 	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException, IOException
 	{
@@ -82,14 +86,15 @@ public class CellHandler extends ContextHandler
 		cache = imgLoader.getCache();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
 
-		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
-		metadataJson = buildMetadataJsonString( imgLoader, seq );
-
 		// dataSetURL property is used for providing the XML file by replace
 		// SequenceDescription>ImageLoader>baseUrl
 		this.xmlFilename = xmlFilename;
 		baseFilename = xmlFilename.endsWith( ".xml" ) ? xmlFilename.substring( 0, xmlFilename.length() - ".xml".length() ) : xmlFilename;
 		dataSetURL = baseUrl;
+
+		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
+		metadataJson = buildMetadataJsonString( imgLoader, seq );
+		settingsXmlString = buildSettingsXML( baseFilename );
 	}
 
 	@Override
@@ -176,40 +181,10 @@ public class CellHandler extends ContextHandler
 		ow.close();
 	}
 
-	public void provideSettings( final Request baseRequest, final HttpServletResponse response )
+	public void provideSettings( final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
-		// Just check it once
-		if ( !remoteSettingsChecked )
-		{
-			remoteSettingsChecked = true;
-
-			try
-			{
-				final SAXBuilder sax = new SAXBuilder();
-
-				final String settings = baseFilename + ".settings" + ".xml";
-
-				final Document doc = sax.build( settings );
-				final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
-
-				final StringWriter sw = new StringWriter();
-				xout.output( doc, sw );
-				remoteSettingsString = sw.toString();
-			}
-			catch ( final JDOMException e )
-			{
-				return;
-			}
-			catch ( final IOException e )
-			{
-				return;
-			}
-		}
-
-		// If the setting is loaded, the context is stored in
-		// remoteSettingsString
-		// Otherwise, it leaves as null.
-		if ( remoteSettingsString == null )
+		if ( settingsXmlString == null )
+			// there is no settings.xml for the dataset
 			return;
 
 		response.setContentType( "application/xml" );
@@ -217,16 +192,9 @@ public class CellHandler extends ContextHandler
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
 
-		try
-		{
-			final PrintWriter ow = response.getWriter();
-			ow.write( remoteSettingsString );
-			ow.close();
-		}
-		catch ( final IOException e )
-		{
-			return;
-		}
+		final PrintWriter ow = response.getWriter();
+		ow.write( settingsXmlString );
+		ow.close();
 	}
 
 	public void provideThumbnail( final Request baseRequest, final HttpServletResponse response )
@@ -335,5 +303,34 @@ public class CellHandler extends ContextHandler
 		final StringWriter sw = new StringWriter();
 		xout.output( doc, sw );
 		return sw.toString();
+	}
+
+	/**
+	 * Read {@code baseFilename.settings.xml} into a string if it exists.
+	 *
+	 * @return contents of {@code baseFilename.settings.xml} or {@code null} if
+	 *         that file couldn't be read.
+	 */
+	private static String buildSettingsXML( final String baseFilename )
+	{
+		final String settings = baseFilename + ".settings.xml";
+		if ( new File( settings ).exists() )
+		{
+			try
+			{
+				final SAXBuilder sax = new SAXBuilder();
+				final Document doc = sax.build( settings );
+				final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+				final StringWriter sw = new StringWriter();
+				xout.output( doc, sw );
+				return sw.toString();
+			}
+			catch ( JDOMException | IOException e )
+			{
+				LOG.warn( "Could not read settings file \"" + settings + "\"" );
+				LOG.warn( e.getMessage() );
+			}
+		}
+		return null;
 	}
 }
