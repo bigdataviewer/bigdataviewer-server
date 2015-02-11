@@ -15,8 +15,7 @@
 	<description>A web server for BigDataViewer datasets</description>
 
 	<properties>
-		<!-- FIXME we need to set enforcer.skip to avoid hecking for java 1.6 compatibility. But we do not want to turn of all the other checks! -->
-		<enforcer.skip>true</enforcer.skip>
+		<scijava.jvm.version>1.7</scijava.jvm.version>
 	</properties>
 
 	<build>
