@@ -23,7 +23,6 @@ import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
@@ -310,6 +309,7 @@ public class CellHandler extends ContextHandler
 
 	public String getDescription()
 	{
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
+	}
 	}
 }
