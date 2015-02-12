@@ -5,6 +5,7 @@ import bdv.VolatileSpimSource;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.spimdata.XmlIoSpimDataMinimal;
+import bdv.tools.InitializeViewerState;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
@@ -222,10 +223,10 @@ public class Thumbnail extends JFrame
 				setupAssignments.moveSetupToGroup( setup, group );
 		}
 
-		InitializeThumbState.initTransform( viewer );
+		InitializeViewerState.initTransform( viewer.getWidth(), viewer.getHeight(), viewer.getState() );
 
 		if ( !tryLoadSettings( xmlFilename ) )
-			InitializeThumbState.initBrightness( 0.001, 0.999, viewer, setupAssignments );
+			InitializeViewerState.initBrightness( 0.001, 0.999, viewer.getState(), setupAssignments );
 
 		ViewerState renderState = viewer.getState();
 		viewer.requestRepaint();
