@@ -293,7 +293,7 @@ public class CellHandler extends ContextHandler
 	private static void createThumbnail( final SpimDataMinimal spimData, final String baseFilename )
 	{
 		final File thumbnailFile = new File( baseFilename + ".png" );
-		final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, 100, 100 );
+		final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, Constants.THUMBNAIL_WIDTH, Constants.THUMBNAIL_HEIGHT );
 		try
 		{
 			ImageIO.write( bi, "png", thumbnailFile );

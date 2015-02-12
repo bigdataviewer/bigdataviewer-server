@@ -11,4 +11,8 @@ public class Constants
 			DATASETLIST_CONTEXT_NAME,
 			MANAGER_CONTEXT_NAME
 	};
+
+	public static final int THUMBNAIL_WIDTH = 100;
+
+	public static final int THUMBNAIL_HEIGHT = 100;
 }
