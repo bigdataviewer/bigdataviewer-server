@@ -12,7 +12,7 @@ import bdv.img.remote.RemoteImageLoaderMetaData;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
-import bdv.util.Thumbnail;
+import bdv.util.ThumbnailGenerator;
 
 import com.google.gson.GsonBuilder;
 
@@ -94,6 +94,7 @@ public class CellHandler extends ContextHandler
 		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
 		metadataJson = buildMetadataJsonString( imgLoader, seq );
 		settingsXmlString = buildSettingsXML( baseFilename );
+		createThumbnail( spimData, baseFilename );
 	}
 
 	@Override
@@ -221,21 +222,6 @@ public class CellHandler extends ContextHandler
 
 	public String getThumbnailUrl()
 	{
-		final File pngFile = new File( baseFilename + ".png" );
-		if ( pngFile.exists() )
-			return dataSetURL + "png";
-
-		// No thumbnail
-		// Trigger to generate thumbnail here
-		try
-		{
-			final Thumbnail thumb = new Thumbnail( xmlFilename, 800, 600 );
-		}
-		catch ( final Exception e )
-		{
-			e.printStackTrace();
-		}
-
 		return dataSetURL + "png";
 	}
 
@@ -299,6 +285,24 @@ public class CellHandler extends ContextHandler
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Create PNG thumbnail file named "{@code <baseFilename>.png}".
+	 */
+	private static void createThumbnail( final SpimDataMinimal spimData, final String baseFilename )
+	{
+		final File thumbnailFile = new File( baseFilename + ".png" );
+		final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, 100, 100 );
+		try
+		{
+			ImageIO.write( bi, "png", thumbnailFile );
+		}
+		catch ( final IOException e )
+		{
+			LOG.warn( "Could not create thumbnail png for dataset \"" + baseFilename + "\"" );
+			LOG.warn( e.getMessage() );
+		}
 	}
 
 	/**
