@@ -35,6 +35,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class CellHandler extends ContextHandler
 {
@@ -165,26 +168,14 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
-	public void provideThumbnail( final Request baseRequest, final HttpServletResponse response )
+	private void provideThumbnail( final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
 		// Just check it once
-		final File pngFile = new File( baseFilename + ".png" );
+		final Path path = Paths.get( baseFilename + ".png" );
 
-		if ( pngFile.exists() )
+		if ( Files.exists( path ) )
 		{
-			byte[] imageData = null;
-			try
-			{
-				final BufferedImage image = ImageIO.read( pngFile );
-				final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				ImageIO.write( image, "png", baos );
-				imageData = baos.toByteArray();
-			}
-			catch ( final IOException e )
-			{
-				e.printStackTrace();
-			}
-
+			final byte[] imageData = Files.readAllBytes(path);
 			if ( imageData != null )
 			{
 				response.setContentType( "image/png" );
@@ -192,21 +183,10 @@ public class CellHandler extends ContextHandler
 				response.setStatus( HttpServletResponse.SC_OK );
 				baseRequest.setHandled( true );
 
-				try
-				{
-					final OutputStream os = response.getOutputStream();
-					os.write( imageData );
-					os.close();
-				}
-				catch ( final IOException e )
-				{
-					return;
-				}
+				final OutputStream os = response.getOutputStream();
+				os.write( imageData );
+				os.close();
 			}
-		}
-		else
-		{
-			return;
 		}
 	}
 
