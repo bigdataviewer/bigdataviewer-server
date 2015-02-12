@@ -31,6 +31,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.volatiles.VolatileARGBType;
+
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -38,6 +39,7 @@ import org.jdom2.input.SAXBuilder;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -228,20 +230,20 @@ public class Thumbnail extends JFrame
 		if ( !tryLoadSettings( xmlFilename ) )
 			InitializeViewerState.initBrightness( 0.001, 0.999, viewer.getState(), setupAssignments );
 
-		ViewerState renderState = viewer.getState();
+		final ViewerState renderState = viewer.getState();
 		viewer.requestRepaint();
 		viewer.paint( renderState );
 
-		Image img = viewer.getBufferedImage().getScaledInstance( 100, 100, Image.SCALE_SMOOTH );
+		final Image img = viewer.getBufferedImage().getScaledInstance( 100, 100, Image.SCALE_SMOOTH );
 
-		BufferedImage img2 = new BufferedImage( 100, 100, BufferedImage.TYPE_INT_ARGB );
+		final BufferedImage img2 = new BufferedImage( 100, 100, BufferedImage.TYPE_INT_ARGB );
 		img2.createGraphics().drawImage( img, 0, 0, null );
 
 		try
 		{
 			ImageIO.write( img2, "png", new File( thumbnailFile ) );
 		}
-		catch ( Exception e )
+		catch ( final Exception e )
 		{
 		}
 	}
@@ -286,7 +288,7 @@ public class Thumbnail extends JFrame
 
 		try
 		{
-			Thumbnail thumb = new Thumbnail( fn, 800, 600 );
+			final Thumbnail thumb = new Thumbnail( fn, 800, 600 );
 		}
 		catch ( final Exception e )
 		{
