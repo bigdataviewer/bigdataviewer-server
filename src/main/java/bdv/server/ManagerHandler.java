@@ -23,6 +23,10 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 
+/**
+ * @author HongKee Moon <moon@mpi-cbg.de>
+ * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
+ */
 public class ManagerHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( ManagerHandler.class );
@@ -43,13 +47,23 @@ public class ManagerHandler extends ContextHandler
 
 	private long sizeDataSets = 0;
 
-	public ManagerHandler( final String baseURL, final Server server, final ConnectorStatistics connectorStats, final StatisticsHandler statHandler, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	private final String thumbnailsDirectoryName;
+
+	public ManagerHandler(
+			final String baseURL,
+			final Server server,
+			final ConnectorStatistics connectorStats,
+			final StatisticsHandler statHandler,
+			final ContextHandlerCollection handlers,
+			final String thumbnailsDirectoryName )
+					throws IOException, URISyntaxException
 	{
 		this.baseURL = baseURL;
 		this.server = server;
 		this.handlers = handlers;
 		this.statHandler = statHandler;
 		this.connectorStats = connectorStats;
+		this.thumbnailsDirectoryName = thumbnailsDirectoryName;
 		setContextPath( "/" + Constants.MANAGER_CONTEXT_NAME );
 	}
 
@@ -77,7 +91,6 @@ public class ManagerHandler extends ContextHandler
 		{
 			return;
 		}
-
 	}
 
 	public String getByteSizeString( final long size )
@@ -103,11 +116,8 @@ public class ManagerHandler extends ContextHandler
 
 	private String getHtml()
 	{
-		// manager.st should be under {WorkingFolder}/templates/
-		final StringTemplateGroup templates =
-				new StringTemplateGroup( "manager", "templates" );
-
-		final StringTemplate t = templates.getInstanceOf( "manager" );
+		final StringTemplateGroup templates = new StringTemplateGroup( "manager" );
+		final StringTemplate t = templates.getInstanceOf( "templates/manager" );
 
 		t.setAttribute( "bytesSent", getByteSizeString( statHandler.getResponsesBytesTotal() ) );
 		t.setAttribute( "msgPerSec", connectorStats.getMessagesOutPerSecond() );
@@ -136,16 +146,12 @@ public class ManagerHandler extends ContextHandler
 			final StringBuilder sb = new StringBuilder();
 			for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 			{
-				CellHandler contextHandler = null;
-				if ( handler instanceof CellHandler )
-				{
-					sb.append( "<tr>\n<th>" );
-					contextHandler = ( CellHandler ) handler;
-					sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
-					sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
-					noDataSets++;
-					sizeDataSets += new File( contextHandler.getXmlFile().replace( ".xml", ".h5" ) ).length();
-				}
+				sb.append( "<tr>\n<th>" );
+				final CellHandler contextHandler = ( CellHandler ) handler;
+				sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
+				sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
+				noDataSets++;
+				sizeDataSets += new File( contextHandler.getXmlFile().replace( ".xml", ".h5" ) ).length();
 			}
 			contexts = sb.toString();
 		}
@@ -154,25 +160,45 @@ public class ManagerHandler extends ContextHandler
 	private void deploy( final String datasetName, final String fileLocation, final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
 		LOG.info( "Add new context: " + datasetName );
-		CellHandler ctx = null;
-		try
+		final String context = "/" + datasetName;
+
+		boolean alreadyExists = false;
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
-			ctx = new CellHandler( baseURL + datasetName + "/", fileLocation );
+			final CellHandler contextHandler = ( CellHandler ) handler;
+			if ( context.equals( contextHandler.getContextPath() ) )
+			{
+				LOG.info( "Context " + datasetName + " already exists.");
+				alreadyExists = true;
+				break;
+			}
 		}
-		catch ( final SpimDataException e )
+
+		if ( ! alreadyExists )
 		{
-			LOG.warn( "Failed to create a CellHandler", e );
-			e.printStackTrace();
+			CellHandler ctx = null;
+			try
+			{
+				ctx = new CellHandler( baseURL + context + "/", fileLocation, datasetName, thumbnailsDirectoryName );
+			}
+			catch ( final SpimDataException e )
+			{
+				LOG.warn( "Failed to create a CellHandler", e );
+				e.printStackTrace();
+			}
+			ctx.setContextPath( context );
+			handlers.addHandler( ctx );
 		}
-		ctx.setContextPath( "/" + datasetName );
-		handlers.addHandler( ctx );
 
 		response.setContentType( "text/html" );
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
 
 		final PrintWriter ow = response.getWriter();
-		ow.write( datasetName + " registered." );
+		if ( alreadyExists )
+			ow.write( datasetName + " already exists. Not registered." );
+		else
+			ow.write( datasetName + " registered." );
 		ow.close();
 	}
 
@@ -181,27 +207,24 @@ public class ManagerHandler extends ContextHandler
 		LOG.info( "Remove the context: " + datasetName );
 		boolean ret = false;
 
+		final String context = "/" + datasetName;
 		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
-			CellHandler contextHandler = null;
-			if ( handler instanceof CellHandler )
+			final CellHandler contextHandler = ( CellHandler ) handler;
+			if ( context.equals( contextHandler.getContextPath() ) )
 			{
-				contextHandler = ( CellHandler ) handler;
-				if ( datasetName.equals( contextHandler.getContextPath() ) )
+				try
 				{
-					try
-					{
-						contextHandler.stop();
-					}
-					catch ( final Exception e )
-					{
-						e.printStackTrace();
-					}
-					contextHandler.destroy();
-					handlers.removeHandler( contextHandler );
-					ret = true;
-					break;
+					contextHandler.stop();
 				}
+				catch ( final Exception e )
+				{
+					e.printStackTrace();
+				}
+				contextHandler.destroy();
+				handlers.removeHandler( contextHandler );
+				ret = true;
+				break;
 			}
 		}
 

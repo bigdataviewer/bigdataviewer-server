@@ -78,7 +78,12 @@ public class CellHandler extends ContextHandler
 	 */
 	private final String settingsXmlString;
 
-	public CellHandler( final String baseUrl, final String xmlFilename ) throws SpimDataException, IOException
+	/**
+	 * Full path to thumbnail png.
+	 */
+	private final String thumbnailFilename;
+
+	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
 		final SpimDataMinimal spimData = io.load( xmlFilename );
@@ -97,7 +102,7 @@ public class CellHandler extends ContextHandler
 		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
 		metadataJson = buildMetadataJsonString( imgLoader, seq );
 		settingsXmlString = buildSettingsXML( baseFilename );
-		createThumbnail( spimData, baseFilename );
+		thumbnailFilename = createThumbnail( spimData, baseFilename, datasetName, thumbnailsDirectory );
 	}
 
 	@Override
@@ -170,9 +175,7 @@ public class CellHandler extends ContextHandler
 
 	private void provideThumbnail( final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
-		// Just check it once
-		final Path path = Paths.get( baseFilename + ".png" );
-
+		final Path path = Paths.get( thumbnailFilename );
 		if ( Files.exists( path ) )
 		{
 			final byte[] imageData = Files.readAllBytes(path);
@@ -270,19 +273,25 @@ public class CellHandler extends ContextHandler
 	/**
 	 * Create PNG thumbnail file named "{@code <baseFilename>.png}".
 	 */
-	private static void createThumbnail( final SpimDataMinimal spimData, final String baseFilename )
+	private static String createThumbnail( final SpimDataMinimal spimData, final String baseFilename, final String datasetName, final String thumbnailsDirectory )
 	{
-		final File thumbnailFile = new File( baseFilename + ".png" );
-		final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, Constants.THUMBNAIL_WIDTH, Constants.THUMBNAIL_HEIGHT );
-		try
+		final String thumbnailFileName = thumbnailsDirectory + "/" + datasetName + ".png";
+		final File thumbnailFile = new File( thumbnailFileName );
+		if ( !thumbnailFile.isFile() ) // do not recreate thumbnail if it
+										// already exists
 		{
-			ImageIO.write( bi, "png", thumbnailFile );
+			final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, Constants.THUMBNAIL_WIDTH, Constants.THUMBNAIL_HEIGHT );
+			try
+			{
+				ImageIO.write( bi, "png", thumbnailFile );
+			}
+			catch ( final IOException e )
+			{
+				LOG.warn( "Could not create thumbnail png for dataset \"" + baseFilename + "\"" );
+				LOG.warn( e.getMessage() );
+			}
 		}
-		catch ( final IOException e )
-		{
-			LOG.warn( "Could not create thumbnail png for dataset \"" + baseFilename + "\"" );
-			LOG.warn( e.getMessage() );
-		}
+		return thumbnailFileName;
 	}
 
 	/**

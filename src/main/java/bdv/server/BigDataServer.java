@@ -6,11 +6,11 @@ import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectorStatistics;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -61,7 +61,8 @@ public class BigDataServer
 		{
 			hostname = "localhost";
 		}
-		return new Parameters( port, hostname, new HashMap< String, String >() );
+		final boolean enableManagerContext = false;
+		return new Parameters( port, hostname, new HashMap< String, String >(), enableManagerContext );
 	}
 
 	public static void main( final String[] args ) throws Exception
@@ -72,6 +73,8 @@ public class BigDataServer
 		if ( params == null )
 			return;
 
+		final String thumbnailsDirectoryName = getThumbnailDirectoryPath( params );
+
 		// Threadpool for multiple connections
 		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
 
@@ -81,29 +84,32 @@ public class BigDataServer
 		connector.setPort( params.getPort() );
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
-
-		// Add Statistics bean to the connector
-		final ConnectorStatistics connectorStats = new ConnectorStatistics();
-		connector.addBean( connectorStats );
-
 		final String baseURL = "http://" + server.getURI().getHost() + ":" + params.getPort();
-		LOG.info( "Server Base URL: " + baseURL );
 
 		// Handler initialization
-		final StatisticsHandler statHandler = new StatisticsHandler();
-
 		final HandlerCollection handlers = new HandlerCollection();
 
-		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, params.getDatasets() );
+		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, params.getDatasets(), thumbnailsDirectoryName );
 		handlers.addHandler( datasetHandlers );
-		handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers ) );
-		handlers.addHandler( new RequestLogHandler() );
 		handlers.addHandler( new JsonDatasetListHandler( server, datasetHandlers ) );
 
-		statHandler.setHandler( handlers );
+		Handler handler = handlers;
+		if ( params.enableManagerContext() )
+		{
+			// Add Statistics bean to the connector
+			final ConnectorStatistics connectorStats = new ConnectorStatistics();
+			connector.addBean( connectorStats );
 
-		LOG.info( "Set handler: " + statHandler );
-		server.setHandler( statHandler );
+			// create StatisticsHandler wrapper and ManagerHandler
+			final StatisticsHandler statHandler = new StatisticsHandler();
+			handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers, thumbnailsDirectoryName ) );
+			statHandler.setHandler( handlers );
+			handler = statHandler;
+		}
+
+		LOG.info( "Set handler: " + handler );
+		server.setHandler( handler );
+		LOG.info( "Server Base URL: " + baseURL );
 		LOG.info( "BigDataServer starting" );
 		server.start();
 		server.join();
@@ -123,11 +129,14 @@ public class BigDataServer
 		 */
 		private final Map< String, String > datasetNameToXml;
 
-		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml )
+		private final boolean enableManagerContext;
+
+		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final boolean enableManagerContext )
 		{
 			this.port = port;
 			this.hostname = hostname;
 			this.datasetNameToXml = datasetNameToXml;
+			this.enableManagerContext = enableManagerContext;
 		}
 
 		public int getPort()
@@ -140,6 +149,11 @@ public class BigDataServer
 			return hostname;
 		}
 
+		public String getThumbnailDirectory()
+		{
+			return null;
+		}
+
 		/**
 		 * Get datasets.
 		 *
@@ -148,6 +162,11 @@ public class BigDataServer
 		public Map< String, String > getDatasets()
 		{
 			return datasetNameToXml;
+		}
+
+		public boolean enableManagerContext()
+		{
+			return enableManagerContext;
 		}
 	}
 
@@ -182,6 +201,10 @@ public class BigDataServer
 				.withArgName( "FILE" )
 				.create( "d" ) );
 
+		options.addOption( OptionBuilder
+				.withDescription( "enable statistics and manager context. EXPERIMENTAL!" )
+				.create( "m" ) );
+
 		try
 		{
 			final CommandLineParser parser = new BasicParser();
@@ -196,6 +219,10 @@ public class BigDataServer
 			final String serverName = serverString;
 
 			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
+
+			boolean enableManagerContext = false;
+			if ( cmd.hasOption( "m" ) )
+				enableManagerContext = true;
 
 			if ( cmd.hasOption( "d" ) )
 			{
@@ -243,7 +270,7 @@ public class BigDataServer
 			if ( datasets.isEmpty() )
 				throw new IllegalArgumentException( "Dataset list is empty." );
 
-			return new Parameters( port, serverName, datasets );
+			return new Parameters( port, serverName, datasets, enableManagerContext );
 		}
 		catch ( final ParseException | IllegalArgumentException e )
 		{
@@ -267,7 +294,39 @@ public class BigDataServer
 		LOG.info( "Dataset added: {" + name + ", " + xmlpath + "}" );
 	}
 
-	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet ) throws SpimDataException, IOException
+	private static String getThumbnailDirectoryPath( final Parameters params ) throws IOException
+	{
+		final String thumbnailDirectoryName = params.getThumbnailDirectory();
+		if ( thumbnailDirectoryName != null )
+		{
+			Path thumbnails = Paths.get( thumbnailDirectoryName );
+			if ( ! Files.exists( thumbnails ) )
+			{
+				try
+				{
+					thumbnails = Files.createDirectories( thumbnails );
+					return thumbnails.toFile().getAbsolutePath();
+				}
+				catch ( final IOException e )
+				{
+					LOG.warn( e.getMessage() );
+					LOG.warn( "Could not create thumbnails directory \"" + thumbnailDirectoryName + "\".\n Trying to create temporary directory." );
+				}
+			}
+			else
+			{
+				if ( ! Files.isDirectory( thumbnails ) )
+					LOG.warn( "Thumbnails directory \"" + thumbnailDirectoryName + "\" is not a directory.\n Trying to create temporary directory." );
+				else
+					return thumbnails.toFile().getAbsolutePath();
+			}
+		}
+		final Path thumbnails = Files.createTempDirectory( "thumbnails" );
+		thumbnails.toFile().deleteOnExit();
+		return thumbnails.toFile().getAbsolutePath();
+	}
+
+	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet, final String thumbnailsDirectoryName ) throws SpimDataException, IOException
 	{
 		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
@@ -276,7 +335,7 @@ public class BigDataServer
 			final String name = entry.getKey();
 			final String xmlpath = entry.getValue();
 			final String context = "/" + name;
-			final CellHandler ctx = new CellHandler( baseURL + context + "/", xmlpath );
+			final CellHandler ctx = new CellHandler( baseURL + context + "/", xmlpath, name, thumbnailsDirectoryName );
 			ctx.setContextPath( context );
 			handlers.addHandler( ctx );
 		}
