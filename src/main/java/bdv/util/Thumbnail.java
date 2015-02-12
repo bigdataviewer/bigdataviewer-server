@@ -27,8 +27,6 @@ import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
-
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -39,7 +37,7 @@ import java.util.List;
 /**
  * Created by moon on 2/5/15.
  */
-public class Thumbnail extends JFrame
+public class Thumbnail
 {
 	protected final ThumbnailGenerator viewer;
 
