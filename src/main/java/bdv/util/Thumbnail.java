@@ -82,7 +82,7 @@ public class Thumbnail
 
 		final List< TimePoint > timepoints = seq.getTimePoints().getTimePointsOrdered();
 
-		viewer = new ThumbnailGenerator( 800, 600, sources, timepoints.size() );
+		viewer = new ThumbnailGenerator( width, height, sources, timepoints.size() );
 
 		manualTransformation = new ManualTransformation( viewer );
 
