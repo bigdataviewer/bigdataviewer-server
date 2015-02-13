@@ -250,7 +250,7 @@ public class BigDataServer
 
 				for ( final String str : lines )
 				{
-					final String[] tokens = str.split( "\t" );
+					final String[] tokens = str.split( "\\s*\\t\\s*" );
 					if ( tokens.length == 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
 					{
 						final String name = tokens[ 0 ].trim();
