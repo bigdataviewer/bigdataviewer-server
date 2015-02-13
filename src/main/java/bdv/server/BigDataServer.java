@@ -40,7 +40,11 @@ import java.util.Map.Entry;
  *                  per line. Each line is formatted as "NAME &lt;TAB&gt; XML".
  *  -p &lt;PORT&gt;       Listening port. (default: 8080)
  *  -s &lt;HOSTNAME&gt;   Hostname of the server.
+ *  -m              enable statistics and manager context. EXPERIMENTAL!
  * </pre>
+ *
+ * To enable the {@code -m} option, build with
+ * {@link Constants#ENABLE_EXPERIMENTAL_FEATURES} set to {@code true}.
  *
  * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
  * @author HongKee Moon <moon@mpi-cbg.de>
@@ -201,9 +205,12 @@ public class BigDataServer
 				.withArgName( "FILE" )
 				.create( "d" ) );
 
-		options.addOption( OptionBuilder
-				.withDescription( "enable statistics and manager context. EXPERIMENTAL!" )
-				.create( "m" ) );
+		if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
+		{
+			options.addOption( OptionBuilder
+					.withDescription( "enable statistics and manager context. EXPERIMENTAL!" )
+					.create( "m" ) );
+		}
 
 		try
 		{
@@ -221,8 +228,11 @@ public class BigDataServer
 			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
 
 			boolean enableManagerContext = false;
-			if ( cmd.hasOption( "m" ) )
-				enableManagerContext = true;
+			if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
+			{
+				if ( cmd.hasOption( "m" ) )
+					enableManagerContext = true;
+			}
 
 			if ( cmd.hasOption( "d" ) )
 			{
