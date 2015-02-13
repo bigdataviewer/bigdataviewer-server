@@ -40,6 +40,8 @@ import java.util.Map.Entry;
  *                  per line. Each line is formatted as "NAME &lt;TAB&gt; XML".
  *  -p &lt;PORT&gt;       Listening port. (default: 8080)
  *  -s &lt;HOSTNAME&gt;   Hostname of the server.
+ *  -t &lt;DIRECTORY&gt;  Directory to store thumbnails. (new temporary directory
+ *                  by default.)
  *  -m              enable statistics and manager context. EXPERIMENTAL!
  * </pre>
  *
@@ -65,8 +67,9 @@ public class BigDataServer
 		{
 			hostname = "localhost";
 		}
+		final String thumbnailDirectory = null;
 		final boolean enableManagerContext = false;
-		return new Parameters( port, hostname, new HashMap< String, String >(), enableManagerContext );
+		return new Parameters( port, hostname, new HashMap< String, String >(), thumbnailDirectory, enableManagerContext );
 	}
 
 	public static void main( final String[] args ) throws Exception
@@ -133,13 +136,16 @@ public class BigDataServer
 		 */
 		private final Map< String, String > datasetNameToXml;
 
+		private final String thumbnailDirectory;
+
 		private final boolean enableManagerContext;
 
-		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final boolean enableManagerContext )
+		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final String thumbnailDirectory, final boolean enableManagerContext )
 		{
 			this.port = port;
 			this.hostname = hostname;
 			this.datasetNameToXml = datasetNameToXml;
+			this.thumbnailDirectory = thumbnailDirectory;
 			this.enableManagerContext = enableManagerContext;
 		}
 
@@ -155,7 +161,7 @@ public class BigDataServer
 
 		public String getThumbnailDirectory()
 		{
-			return null;
+			return thumbnailDirectory;
 		}
 
 		/**
@@ -205,6 +211,12 @@ public class BigDataServer
 				.withArgName( "FILE" )
 				.create( "d" ) );
 
+		options.addOption( OptionBuilder
+				.withDescription( "Directory to store thumbnails. (new temporary directory by default.)" )
+				.hasArg()
+				.withArgName( "DIRECTORY" )
+				.create( "t" ) );
+
 		if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
 		{
 			options.addOption( OptionBuilder
@@ -222,8 +234,10 @@ public class BigDataServer
 			final int port = Integer.parseInt( portString );
 
 			// Getting server name option
-			final String serverString = cmd.getOptionValue( "s", defaultParameters.getHostname() );
-			final String serverName = serverString;
+			final String serverName = cmd.getOptionValue( "s", defaultParameters.getHostname() );
+
+			// Getting thumbnail directory option
+			final String thumbnailDirectory = cmd.getOptionValue( "t", defaultParameters.getThumbnailDirectory() );
 
 			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
 
@@ -280,7 +294,7 @@ public class BigDataServer
 			if ( datasets.isEmpty() )
 				throw new IllegalArgumentException( "Dataset list is empty." );
 
-			return new Parameters( port, serverName, datasets, enableManagerContext );
+			return new Parameters( port, serverName, datasets, thumbnailDirectory, enableManagerContext );
 		}
 		catch ( final ParseException | IllegalArgumentException e )
 		{

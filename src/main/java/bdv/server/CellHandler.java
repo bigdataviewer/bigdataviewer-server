@@ -277,8 +277,7 @@ public class CellHandler extends ContextHandler
 	{
 		final String thumbnailFileName = thumbnailsDirectory + "/" + datasetName + ".png";
 		final File thumbnailFile = new File( thumbnailFileName );
-		if ( !thumbnailFile.isFile() ) // do not recreate thumbnail if it
-										// already exists
+		if ( !thumbnailFile.isFile() ) // do not recreate thumbnail if it already exists
 		{
 			final BufferedImage bi = ThumbnailGenerator.makeThumbnail( spimData, baseFilename, Constants.THUMBNAIL_WIDTH, Constants.THUMBNAIL_HEIGHT );
 			try
