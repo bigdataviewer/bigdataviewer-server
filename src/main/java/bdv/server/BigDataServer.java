@@ -1,18 +1,18 @@
 package bdv.server;
 
 import mpicbg.spim.data.SpimDataException;
-
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.ConnectorStatistics;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.security.ConstraintMapping;
+import org.eclipse.jetty.security.ConstraintSecurityHandler;
+import org.eclipse.jetty.security.HashLoginService;
+import org.eclipse.jetty.security.authentication.BasicAuthenticator;
+import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.IOException;
@@ -111,7 +111,27 @@ public class BigDataServer
 			final StatisticsHandler statHandler = new StatisticsHandler();
 			handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers, thumbnailsDirectoryName ) );
 			statHandler.setHandler( handlers );
-			handler = statHandler;
+
+			Constraint constraint = new Constraint();
+			constraint.setName( Constraint.__BASIC_AUTH );
+			;
+			constraint.setRoles( new String[] { "admin", "superuser" } );
+			constraint.setAuthenticate( true );
+
+			ConstraintMapping cm = new ConstraintMapping();
+			cm.setPathSpec( "/manager/*" );
+			cm.setConstraint( constraint );
+
+			// Please change the password in realm.properties
+			HashLoginService loginService = new HashLoginService( "BigDataServerRealm", System.getProperty( "jetty.home", "." ) + "/etc/realm.properties" );
+			server.addBean( loginService );
+
+			ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
+			sh.setLoginService( loginService );
+			sh.setAuthenticator( new BasicAuthenticator() );
+			sh.addConstraintMapping( cm );
+			sh.setHandler( statHandler );
+			handler = sh;
 		}
 
 		LOG.info( "Set handler: " + handler );
