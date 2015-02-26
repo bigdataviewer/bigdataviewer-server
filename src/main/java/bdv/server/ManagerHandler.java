@@ -17,7 +17,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
@@ -151,7 +150,7 @@ public class ManagerHandler extends ContextHandler
 				sb.append( contextHandler.getContextPath() + "</th>\n<td>" );
 				sb.append( contextHandler.getXmlFile() + "</td>\n</tr>\n" );
 				noDataSets++;
-				sizeDataSets += new File( contextHandler.getXmlFile().replace( ".xml", ".h5" ) ).length();
+				sizeDataSets += contextHandler.getDataSetSize();
 			}
 			contexts = sb.toString();
 		}

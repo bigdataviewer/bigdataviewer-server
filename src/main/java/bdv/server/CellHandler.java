@@ -6,6 +6,7 @@ import bdv.img.cache.LoadingStrategy;
 import bdv.img.cache.VolatileCell;
 import bdv.img.cache.VolatileGlobalCellCache;
 import bdv.img.hdf5.Hdf5ImageLoader;
+import bdv.img.hdf5.Partition;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
 import bdv.img.remote.RemoteImageLoader;
 import bdv.img.remote.RemoteImageLoaderMetaData;
@@ -83,6 +84,8 @@ public class CellHandler extends ContextHandler
 	 */
 	private final String thumbnailFilename;
 
+	private final long datasetSize;
+
 	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
@@ -103,6 +106,17 @@ public class CellHandler extends ContextHandler
 		metadataJson = buildMetadataJsonString( imgLoader, seq );
 		settingsXmlString = buildSettingsXML( baseFilename );
 		thumbnailFilename = createThumbnail( spimData, baseFilename, datasetName, thumbnailsDirectory );
+
+		// Calculate dataset size based on the partitions
+		long size = new File( xmlFilename.replace( ".xml", ".h5" ) ).length();
+
+		if ( imgLoader.getPartitions().size() > 0 )
+			for ( Partition partition : imgLoader.getPartitions() )
+			{
+				size += new File( partition.getPath() ).length();
+			}
+
+		datasetSize = size;
 	}
 
 	@Override
@@ -306,5 +320,13 @@ public class CellHandler extends ContextHandler
 		final PrintWriter ow = response.getWriter();
 		ow.write( string );
 		ow.close();
+	}
+
+	/**
+	 * Get the current dataset size
+	 */
+	public long getDataSetSize()
+	{
+		return datasetSize;
 	}
 }
