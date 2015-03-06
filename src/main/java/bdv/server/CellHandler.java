@@ -86,8 +86,12 @@ public class CellHandler extends ContextHandler
 
 	private final long datasetSize;
 
+	private boolean active = false;
+
 	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
+		active = true;
+
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
 		final SpimDataMinimal spimData = io.load( xmlFilename );
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
@@ -328,5 +332,23 @@ public class CellHandler extends ContextHandler
 	public long getDataSetSize()
 	{
 		return datasetSize;
+	}
+
+	/**
+	 * Get the active status
+	 * @return
+	 */
+	public boolean isActive()
+	{
+		return active;
+	}
+
+	/**
+	 * Set the active status
+	 * @param active
+	 */
+	public void setActive( boolean active )
+	{
+		this.active = active;
 	}
 }

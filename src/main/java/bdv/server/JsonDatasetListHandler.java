@@ -72,20 +72,23 @@ public class JsonDatasetListHandler extends ContextHandler
 			{
 				contextHandler = ( CellHandler ) handler;
 
-				final String datasetName = contextHandler.getContextPath().replaceFirst( "/", "" );
+				if ( contextHandler.isActive() )
+				{
+					final String datasetName = contextHandler.getContextPath().replaceFirst( "/", "" );
 
-				writer.name( datasetName ).beginObject();
+					writer.name( datasetName ).beginObject();
 
-				writer.name( "id" ).value( datasetName );
+					writer.name( "id" ).value( datasetName );
 
-				//writer.name( "desc" ).value( contextHandler.getDescription() );
-				writer.name( "description" ).value( "NotImplemented" );
+					//writer.name( "desc" ).value( contextHandler.getDescription() );
+					writer.name( "description" ).value( "NotImplemented" );
 
-				writer.name( "thumbnailUrl" ).value( contextHandler.getThumbnailUrl() );
+					writer.name( "thumbnailUrl" ).value( contextHandler.getThumbnailUrl() );
 
-				writer.name( "datasetUrl" ).value( contextHandler.getDataSetURL() );
+					writer.name( "datasetUrl" ).value( contextHandler.getDataSetURL() );
 
-				writer.endObject();
+					writer.endObject();
+				}
 			}
 		}
 		return sb.toString();

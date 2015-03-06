@@ -91,6 +91,7 @@
                             <table class="table table-striped table-bordered table-hover" id="dataTables">
                                 <thead>
                                 <tr>
+                                    <th>Active</th>
                                     <th>Name</th>
                                     <th>Path</th>
                                 </tr>
@@ -142,10 +143,35 @@
             autoWidth: false,
             responsive: true,
             columns: [
+                {
+                    data: "active",
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return '<input type="checkbox" class="editor-active"/>';
+                        }
+                        return data;
+                    },
+                    className: "dt-body-center"
+                },
                 { "data": "name" },
                 { "data": "path" }
             ],
-            ajax: "/manager/?op=getDatasets"
+            ajax: "/manager/?op=getDatasets",
+            rowCallback: function (row, data) {
+                // Set the checked state of the checkbox in the table
+                $('input.editor-active', row).prop('checked', data.active == true);
+            }
+        });
+
+        $('#dataTables').on('change', 'input.editor-active', function () {
+            $.ajax({
+                type: "POST",
+                url: "/manager/?op=activate",
+                data: { name: $(this).parent().next().text(), active: $(this).prop('checked')},
+//                success: function(msg){
+//                    console.info( "Dataset activated: " + msg );
+//                }
+            });
         });
     });
 </script>

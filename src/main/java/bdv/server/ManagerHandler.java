@@ -129,6 +129,13 @@ public class ManagerHandler extends ContextHandler
 				// Provide html type of server information
 				getServerInfo( baseRequest, response );
 			}
+			else if ( op.equals( "activate" ) )
+			{
+				// Provide html type of server information
+				final String datasetName = request.getParameter( "name" );
+				final String activated = request.getParameter( "active" );
+				activateDataset( datasetName, activated, baseRequest, response );
+			}
 		}
 		else
 		{
@@ -320,6 +327,7 @@ public class ManagerHandler extends ContextHandler
 		{
 			final CellHandler contextHandler = ( CellHandler ) handler;
 			writer.beginObject();
+			writer.name( "active" ).value( true );
 			writer.name( "name" ).value( contextHandler.getContextPath().replaceFirst( "/", "" ) );
 			writer.name( "path" ).value( contextHandler.getXmlFile() );
 			writer.endObject();
@@ -356,6 +364,29 @@ public class ManagerHandler extends ContextHandler
 		t.setAttribute( "sizeDataSets", getByteSizeString( sizeDataSets ) );
 
 		ow.write( t.toString() );
+		ow.close();
+	}
+
+	private void activateDataset( String datasetName, String activated, Request baseRequest, HttpServletResponse response ) throws IOException
+	{
+		//		System.out.println(datasetName + ":" + activated);
+		response.setContentType( "text/html" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final String context = "/" + datasetName;
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		{
+			final CellHandler contextHandler = ( CellHandler ) handler;
+			if ( context.equals( contextHandler.getContextPath() ) )
+			{
+				contextHandler.setActive( activated.equals( "true" ) );
+				break;
+			}
+		}
+
+		final PrintWriter ow = response.getWriter();
+		ow.write( datasetName + " active:" + activated );
 		ow.close();
 	}
 }
