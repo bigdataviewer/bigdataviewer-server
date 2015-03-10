@@ -126,6 +126,9 @@ public class CellHandler extends ContextHandler
 	@Override
 	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException
 	{
+		if ( !active )
+			return;
+
 		if ( target.equals( "/settings" ) )
 		{
 			if ( settingsXmlString != null )
@@ -347,7 +350,7 @@ public class CellHandler extends ContextHandler
 	 * Set the active status
 	 * @param active
 	 */
-	public void setActive( boolean active )
+	public void setActive( boolean active ) throws SpimDataException
 	{
 		this.active = active;
 	}

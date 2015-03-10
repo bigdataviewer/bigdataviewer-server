@@ -65,7 +65,7 @@ public class ManagerHandler extends ContextHandler
 			final StatisticsHandler statHandler,
 			final ContextHandlerCollection handlers,
 			final String thumbnailsDirectoryName )
-					throws IOException, URISyntaxException
+			throws IOException, URISyntaxException
 	{
 		this.baseURL = baseURL;
 		this.server = server;
@@ -181,13 +181,13 @@ public class ManagerHandler extends ContextHandler
 			final CellHandler contextHandler = ( CellHandler ) handler;
 			if ( context.equals( contextHandler.getContextPath() ) )
 			{
-				LOG.info( "Context " + datasetName + " already exists.");
+				LOG.info( "Context " + datasetName + " already exists." );
 				alreadyExists = true;
 				break;
 			}
 		}
 
-		if ( ! alreadyExists )
+		if ( !alreadyExists )
 		{
 			CellHandler ctx = null;
 			try
@@ -209,9 +209,9 @@ public class ManagerHandler extends ContextHandler
 
 		final PrintWriter ow = response.getWriter();
 		if ( alreadyExists )
-			ow.write( datasetName + " already exists. Not registered." );
+			ow.write( "Error: " + datasetName + " already exists. Not registered." );
 		else
-			ow.write( datasetName + " registered." );
+			ow.write( "Success: " + datasetName + " is registered." );
 		ow.close();
 	}
 
@@ -232,6 +232,7 @@ public class ManagerHandler extends ContextHandler
 				}
 				catch ( final Exception e )
 				{
+					LOG.warn( "Failed to remove the CellHandler", e );
 					e.printStackTrace();
 				}
 				contextHandler.destroy();
@@ -241,16 +242,21 @@ public class ManagerHandler extends ContextHandler
 			}
 		}
 
+		response.setContentType( "text/html" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final PrintWriter ow = response.getWriter();
+
 		if ( ret )
 		{
-			response.setContentType( "text/html" );
-			response.setStatus( HttpServletResponse.SC_OK );
-			baseRequest.setHandled( true );
-
-			final PrintWriter ow = response.getWriter();
-			ow.write( datasetName + " removed." );
-			ow.close();
+			ow.write( "Success: " + datasetName + " is removed." );
 		}
+		else
+		{
+			ow.write( "Error: " + datasetName + " cannot be removed." );
+		}
+		ow.close();
 	}
 
 	private void getTraffic( final int tf, final Request baseRequest, final HttpServletResponse response ) throws IOException
@@ -380,7 +386,14 @@ public class ManagerHandler extends ContextHandler
 			final CellHandler contextHandler = ( CellHandler ) handler;
 			if ( context.equals( contextHandler.getContextPath() ) )
 			{
-				contextHandler.setActive( activated.equals( "true" ) );
+				try
+				{
+					contextHandler.setActive( activated.equals( "true" ) );
+				}
+				catch ( SpimDataException e )
+				{
+					LOG.warn( e );
+				}
 				break;
 			}
 		}

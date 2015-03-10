@@ -100,10 +100,33 @@
                         </div>
                         <!-- /.table-responsive -->
                         <div class="well">
-                            <h4>Control Panel</h4>
+                            <h4>Dataset deployment</h4>
 
-                            <p>Add new dataset</p>
-                            <a class="btn btn-default btn-lg btn-block" target="_blank" href="#">Add</a>
+                            <form action="/manager/" method="POST">
+                                <div class="input-group">
+                                    <span class="input-group-addon" id="basic-addon1">Dataset</span>
+                                    <input name="ds" id="ds" type="text" class="form-control" placeholder="Name"
+                                           aria-describedby="basic-addon1"/>
+                                    <input name="file" id="file" type="text" class="form-control" placeholder="Location"
+                                           aria-describedby="basic-addon1"/>
+                                </div>
+
+                                <button type="button" class="btn btn-info btn-group-justified" id="deployDS">Deploy
+                                </button>
+                                <button type="button" class="btn btn-danger btn-group-justified" id="undeployDS">
+                                    Undeploy
+                                </button>
+                            </form>
+
+                            <div id='error' class="alert alert-danger" style="display: none" role="alert">
+                                <span class="sr-only">Error:</span>
+                                Error message
+                            </div>
+
+                            <div id='success' class="alert alert-success" style="display: none" role="alert">
+                                <span class="sr-only">Success:</span>
+                                Successful message
+                            </div>
                         </div>
                     </div>
                     <!-- /.panel-body -->
@@ -138,8 +161,10 @@
 
 <!-- Page-Level Demo Scripts - Tables - Use for reference -->
 <script>
+    var dataTable = null;
+
     $(document).ready(function () {
-        $('#dataTables').DataTable({
+        dataTable = $('#dataTables').DataTable({
             autoWidth: false,
             responsive: true,
             columns: [
@@ -168,9 +193,51 @@
                 type: "POST",
                 url: "/manager/?op=activate",
                 data: { name: $(this).parent().next().text(), active: $(this).prop('checked')},
-//                success: function(msg){
-//                    console.info( "Dataset activated: " + msg );
-//                }
+                success: function (msg) {
+                    console.info("Dataset activated: " + msg);
+                }
+            });
+        });
+
+        $('#deployDS').on('click', function () {
+            $.ajax({
+                type: "POST",
+                url: "/manager/?op=deploy",
+                data: { ds: $('#ds').val(), file: $('#file').val() },
+                success: function (msg) {
+                    if (msg.match("^Error")) {
+                        $('#error').html(msg);
+                        $('#error').fadeIn(600).delay(5000).fadeOut(600);
+                    }
+                    else if (msg.match("^Success")) {
+                        $('#success').html(msg);
+                        $('#success').fadeIn(600).delay(5000).fadeOut(600);
+                        dataTable.ajax.reload();
+                    }
+
+                    console.info(msg);
+                }
+            });
+        });
+
+        $('#undeployDS').on('click', function () {
+            $.ajax({
+                type: "POST",
+                url: "/manager/?op=undeploy",
+                data: { ds: $('#ds').val() },
+                success: function (msg) {
+                    if (msg.match("^Error")) {
+                        $('#error').html(msg);
+                        $('#error').fadeIn(600).delay(5000).fadeOut(600);
+                    }
+                    else if (msg.match("^Success")) {
+                        $('#success').html(msg);
+                        $('#success').fadeIn(600).delay(5000).fadeOut(600);
+                        dataTable.ajax.reload();
+                    }
+
+                    console.info(msg);
+                }
             });
         });
     });
