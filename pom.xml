@@ -6,11 +6,11 @@
     <parent>
         <groupId>sc.fiji</groupId>
         <artifactId>pom-bigdataviewer</artifactId>
-        <version>1.0.7</version>
+        <version>1.1.2</version>
     </parent>
 
     <artifactId>bigdataviewer-server</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.4-SNAPSHOT</version>
 
     <name>BigDataServer</name>
     <description>A web server for BigDataViewer datasets</description>
@@ -35,7 +35,6 @@
         <dependency>
             <groupId>sc.fiji</groupId>
             <artifactId>bigdataviewer-core</artifactId>
-            <version>1.0.8-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
