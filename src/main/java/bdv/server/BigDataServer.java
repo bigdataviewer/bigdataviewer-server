@@ -12,6 +12,7 @@ import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
@@ -123,7 +124,7 @@ public class BigDataServer
 			cm.setConstraint( constraint );
 
 			// Please change the password in realm.properties
-			HashLoginService loginService = new HashLoginService( "BigDataServerRealm", System.getProperty( "jetty.home", "." ) + "/etc/realm.properties" );
+			HashLoginService loginService = new HashLoginService( "BigDataServerRealm", Resource.newClassPathResource( "etc/realm.properties" ).toString() );
 			server.addBean( loginService );
 
 			ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
