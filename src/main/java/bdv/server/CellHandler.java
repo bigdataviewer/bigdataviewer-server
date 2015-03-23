@@ -44,7 +44,7 @@ public class CellHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
 
-	private final VolatileGlobalCellCache< VolatileShortArray > cache;
+	private VolatileGlobalCellCache< VolatileShortArray > cache;
 
 	private final CacheHints cacheHints;
 
@@ -88,14 +88,18 @@ public class CellHandler extends ContextHandler
 
 	private boolean active = false;
 
+	private SequenceDescriptionMinimal seq;
+
+	private Hdf5ImageLoader imgLoader;
+
 	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		active = true;
 
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
 		final SpimDataMinimal spimData = io.load( xmlFilename );
-		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
-		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
+		seq = spimData.getSequenceDescription();
+		imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
 		cache = imgLoader.getCache();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
@@ -353,5 +357,17 @@ public class CellHandler extends ContextHandler
 	public void setActive( boolean active ) throws SpimDataException
 	{
 		this.active = active;
+
+		if ( active )
+		{
+			imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
+			cache = imgLoader.getCache();
+		}
+		else
+		{
+			imgLoader.close();
+			imgLoader = null;
+			cache = null;
+		}
 	}
 }
