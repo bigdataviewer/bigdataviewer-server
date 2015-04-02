@@ -8,12 +8,11 @@ import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.*;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.StatisticsHandler;
+import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.security.Constraint;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.IOException;
@@ -86,8 +85,17 @@ public class BigDataServer
 		// Threadpool for multiple connections
 		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
 
+		// HTTP Configuration
+		HttpConfiguration httpConfig = new HttpConfiguration();
+		httpConfig.setSecureScheme( "https" );
+		httpConfig.setSecurePort( Constants.SECURE_PORT );
+
+		// Setup buffers on http
+		HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory( httpConfig );
+		httpConnectionFactory.setInputBufferSize( 64 * 1024 );
+
 		// ServerConnector configuration
-		final ServerConnector connector = new ServerConnector( server );
+		final ServerConnector connector = new ServerConnector( server, httpConnectionFactory );
 		connector.setHost( params.getHostname() );
 		connector.setPort( params.getPort() );
 		LOG.info( "Set connectors: " + connector );
@@ -104,6 +112,24 @@ public class BigDataServer
 		Handler handler = handlers;
 		if ( params.enableManagerContext() )
 		{
+			HttpConfiguration https = new HttpConfiguration();
+			https.addCustomizer( new SecureRequestCustomizer() );
+
+			// Please, change localhost according to your site name
+			// keytool -genkey -alias localhost -keyalg RSA -keystore keystore.jks -keysize 2048
+			SslContextFactory sslContextFactory = new SslContextFactory();
+			sslContextFactory.setKeyStorePath( Resource.newClassPathResource( "etc/keystore.jks" ).toString() );
+			sslContextFactory.setKeyStorePassword( "123456" );
+			sslContextFactory.setKeyManagerPassword( "123456" );
+
+			ServerConnector sslConnector = new ServerConnector( server,
+					new SslConnectionFactory( sslContextFactory, "http/1.1" ),
+					new HttpConnectionFactory( https ) );
+			sslConnector.setHost( params.getHostname() );
+			sslConnector.setPort( Constants.SECURE_PORT );
+
+			server.addConnector( sslConnector );
+
 			// Add Statistics bean to the connector
 			final ConnectorStatistics connectorStats = new ConnectorStatistics();
 			connector.addBean( connectorStats );
@@ -115,9 +141,10 @@ public class BigDataServer
 
 			Constraint constraint = new Constraint();
 			constraint.setName( Constraint.__BASIC_AUTH );
-			;
 			constraint.setRoles( new String[] { "admin", "superuser" } );
 			constraint.setAuthenticate( true );
+			// 2 means CONFIDENTIAL. 1 means INTEGRITY
+			constraint.setDataConstraint( 2 );
 
 			ConstraintMapping cm = new ConstraintMapping();
 			cm.setPathSpec( "/manager/*" );
@@ -127,12 +154,23 @@ public class BigDataServer
 			HashLoginService loginService = new HashLoginService( "BigDataServerRealm", Resource.newClassPathResource( "etc/realm.properties" ).toString() );
 			server.addBean( loginService );
 
+			HandlerList handlerList = new HandlerList();
+
+			ContextHandler redirectHandler = new ContextHandler();
+			redirectHandler.setContextPath( "/" + Constants.MANAGER_CONTEXT_NAME );
+			redirectHandler.setHandler( new SecuredRedirectHandler() );
+
+			handlerList.addHandler( redirectHandler );
+
 			ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
 			sh.setLoginService( loginService );
 			sh.setAuthenticator( new BasicAuthenticator() );
 			sh.addConstraintMapping( cm );
 			sh.setHandler( statHandler );
-			handler = sh;
+
+			handlerList.addHandler( sh );
+
+			handler = handlerList;
 		}
 
 		LOG.info( "Set handler: " + handler );
