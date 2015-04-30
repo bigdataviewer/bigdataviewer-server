@@ -9,7 +9,7 @@
 	</parent>
 
 	<artifactId>bigdataviewer-server</artifactId>
-	<version>1.0.4-SNAPSHOT</version>
+	<version>1.0.4</version>
 
 	<name>BigDataServer</name>
 	<description>A web server for BigDataViewer datasets</description>
@@ -77,7 +77,7 @@
 	<scm>
 		<connection>scm:git:git://github.com/tpietzsch/spimviewer</connection>
 		<developerConnection>scm:git:git@github.com:tpietzsch/spimviewer</developerConnection>
-		<tag>HEAD</tag>
+		<tag>bigdataviewer-server-1.0.4</tag>
 		<url>https://github.com/tpietzsch/spimviewer</url>
 	</scm>
 </project>
