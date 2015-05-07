@@ -201,6 +201,16 @@ public class ManagerHandler extends ContextHandler
 			}
 			ctx.setContextPath( context );
 			handlers.addHandler( ctx );
+
+			try
+			{
+				ctx.start();
+			}
+			catch ( Exception e )
+			{
+				LOG.warn( "Failed to start CellHandler", e );
+				e.printStackTrace();
+			}
 		}
 
 		response.setContentType( "text/html" );
