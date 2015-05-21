@@ -219,9 +219,9 @@ public class ManagerHandler extends ContextHandler
 
 		final PrintWriter ow = response.getWriter();
 		if ( alreadyExists )
-			ow.write( "Error: " + datasetName + " already exists. Not registered." );
+			ow.write( "Error: " + datasetName + " already exists. The dataset cannot be deployed." );
 		else
-			ow.write( "Success: " + datasetName + " is registered." );
+			ow.write( "Success: " + datasetName + " is deployed." );
 		ow.close();
 	}
 
@@ -260,11 +260,11 @@ public class ManagerHandler extends ContextHandler
 
 		if ( ret )
 		{
-			ow.write( "Success: " + datasetName + " is removed." );
+			ow.write( "Success: " + datasetName + " is undeployed." );
 		}
 		else
 		{
-			ow.write( "Error: " + datasetName + " cannot be removed." );
+			ow.write( "Error: " + datasetName + " cannot be undeployed." );
 		}
 		ow.close();
 	}
