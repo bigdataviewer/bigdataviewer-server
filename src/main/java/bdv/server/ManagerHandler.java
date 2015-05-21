@@ -343,7 +343,7 @@ public class ManagerHandler extends ContextHandler
 		{
 			final CellHandler contextHandler = ( CellHandler ) handler;
 			writer.beginObject();
-			writer.name( "active" ).value( true );
+			writer.name( "active" ).value( contextHandler.isActive() );
 			writer.name( "name" ).value( contextHandler.getContextPath().replaceFirst( "/", "" ) );
 			writer.name( "path" ).value( contextHandler.getXmlFile() );
 			writer.endObject();
