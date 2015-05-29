@@ -1,5 +1,6 @@
 package bdv.server;
 
+import bdv.model.DataSet;
 import mpicbg.spim.data.SpimDataException;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
@@ -69,7 +70,7 @@ public class BigDataServer
 		}
 		final String thumbnailDirectory = null;
 		final boolean enableManagerContext = false;
-		return new Parameters( port, hostname, new HashMap< String, String >(), thumbnailDirectory, enableManagerContext );
+		return new Parameters( port, hostname, new HashMap< String, DataSet >(), thumbnailDirectory, enableManagerContext );
 	}
 
 	public static void main( final String[] args ) throws Exception
@@ -193,17 +194,17 @@ public class BigDataServer
 		/**
 		 * maps from dataset name to dataset xml path.
 		 */
-		private final Map< String, String > datasetNameToXml;
+		private final Map< String, DataSet > datasetNameToDataSet;
 
 		private final String thumbnailDirectory;
 
 		private final boolean enableManagerContext;
 
-		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final String thumbnailDirectory, final boolean enableManagerContext )
+		Parameters( final int port, final String hostname, final Map< String, DataSet > datasetNameToDataSet, final String thumbnailDirectory, final boolean enableManagerContext )
 		{
 			this.port = port;
 			this.hostname = hostname;
-			this.datasetNameToXml = datasetNameToXml;
+			this.datasetNameToDataSet = datasetNameToDataSet;
 			this.thumbnailDirectory = thumbnailDirectory;
 			this.enableManagerContext = enableManagerContext;
 		}
@@ -228,9 +229,9 @@ public class BigDataServer
 		 *
 		 * @return datasets as a map from dataset name to dataset xml path.
 		 */
-		public Map< String, String > getDatasets()
+		public Map< String, DataSet > getDatasets()
 		{
-			return datasetNameToXml;
+			return datasetNameToDataSet;
 		}
 
 		public boolean enableManagerContext()
@@ -298,7 +299,7 @@ public class BigDataServer
 			// Getting thumbnail directory option
 			final String thumbnailDirectory = cmd.getOptionValue( "t", defaultParameters.getThumbnailDirectory() );
 
-			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
+			final HashMap< String, DataSet > datasets = new HashMap< String, DataSet >( defaultParameters.getDatasets() );
 
 			boolean enableManagerContext = false;
 			if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
@@ -324,11 +325,23 @@ public class BigDataServer
 				for ( final String str : lines )
 				{
 					final String[] tokens = str.split( "\\s*\\t\\s*" );
-					if ( tokens.length == 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
+					if ( tokens.length >= 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
 					{
 						final String name = tokens[ 0 ].trim();
 						final String xmlpath = tokens[ 1 ].trim();
-						tryAddDataset( datasets, name, xmlpath );
+
+						if( tokens.length == 2 )
+						{
+							tryAddDataset( datasets, name, xmlpath );
+						}
+						else if ( tokens.length == 5)
+						{
+							final String category = tokens[2].trim();
+							final String desc = tokens[3].trim();
+							final String index = tokens[4].trim();
+
+							tryAddDataset( datasets, name, xmlpath, category, desc, index );
+						}
 					}
 					else
 					{
@@ -364,17 +377,36 @@ public class BigDataServer
 		return null;
 	}
 
-	private static void tryAddDataset( final HashMap< String, String > datasetNameToXML, final String name, final String xmlpath ) throws IllegalArgumentException
+	private static void tryAddDataset( final HashMap< String, DataSet > datasetNameToDataSet, final String ... args ) throws IllegalArgumentException
 	{
-		for ( final String reserved : Constants.RESERVED_CONTEXT_NAMES )
-			if ( name.equals( reserved ) )
-				throw new IllegalArgumentException( "Cannot use dataset name: \"" + name + "\" (reserved for internal use)." );
-		if ( datasetNameToXML.containsKey( name ) )
-			throw new IllegalArgumentException( "Duplicate dataset name: \"" + name + "\"" );
-		if ( Files.notExists( Paths.get( xmlpath ) ) )
-			throw new IllegalArgumentException( "Dataset file does not exist: \"" + xmlpath + "\"" );
-		datasetNameToXML.put( name, xmlpath );
-		LOG.info( "Dataset added: {" + name + ", " + xmlpath + "}" );
+		if ( args.length >= 2)
+		{
+			final String name = args[0];
+			final String xmlpath = args[1];
+
+			for ( final String reserved : Constants.RESERVED_CONTEXT_NAMES )
+				if ( name.equals( reserved ) )
+					throw new IllegalArgumentException( "Cannot use dataset name: \"" + name + "\" (reserved for internal use)." );
+			if ( datasetNameToDataSet.containsKey( name ) )
+				throw new IllegalArgumentException( "Duplicate dataset name: \"" + name + "\"" );
+			if ( Files.notExists( Paths.get( xmlpath ) ) )
+				throw new IllegalArgumentException( "Dataset file does not exist: \"" + xmlpath + "\"" );
+
+			String category = "";
+			String desc = "";
+			String index = "";
+
+			if( args.length == 5 )
+			{
+				category = args[2];
+				desc = args[3];
+				index = args[4];
+			}
+
+			DataSet ds = new DataSet( name, xmlpath, category, desc, index );
+			datasetNameToDataSet.put( name, ds );
+			LOG.info( "Dataset added: {" + name + ", " + xmlpath + "}" );
+		}
 	}
 
 	private static String getThumbnailDirectoryPath( final Parameters params ) throws IOException
@@ -409,16 +441,16 @@ public class BigDataServer
 		return thumbnails.toFile().getAbsolutePath();
 	}
 
-	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, String > dataSet, final String thumbnailsDirectoryName ) throws SpimDataException, IOException
+	private static ContextHandlerCollection createHandlers( final String baseURL, final Map< String, DataSet > dataSet, final String thumbnailsDirectoryName ) throws SpimDataException, IOException
 	{
 		final ContextHandlerCollection handlers = new ContextHandlerCollection();
 
-		for ( final Entry< String, String > entry : dataSet.entrySet() )
+		for ( final Entry< String, DataSet > entry : dataSet.entrySet() )
 		{
 			final String name = entry.getKey();
-			final String xmlpath = entry.getValue();
+			final DataSet ds = entry.getValue();
 			final String context = "/" + name;
-			final CellHandler ctx = new CellHandler( baseURL + context + "/", xmlpath, name, thumbnailsDirectoryName );
+			final CellHandler ctx = new CellHandler( baseURL + context + "/", ds, thumbnailsDirectoryName );
 			ctx.setContextPath( context );
 			handlers.addHandler( ctx );
 		}

@@ -10,6 +10,7 @@ import bdv.img.hdf5.Partition;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
 import bdv.img.remote.RemoteImageLoader;
 import bdv.img.remote.RemoteImageLoaderMetaData;
+import bdv.model.DataSet;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
@@ -49,17 +50,10 @@ public class CellHandler extends ContextHandler
 	private final CacheHints cacheHints;
 
 	/**
-	 * Full path of the dataset xml file this {@link CellHandler} is serving.
-	 */
-	private final String xmlFilename;
-
-	/**
 	 * Full path of the dataset xml file this {@link CellHandler} is serving,
 	 * without the ".xml" suffix.
 	 */
 	private final String baseFilename;
-
-	private final String dataSetURL;
 
 	/**
 	 * Cached dataset XML to be send to and opened by {@link BigDataViewer}
@@ -84,20 +78,25 @@ public class CellHandler extends ContextHandler
 	 */
 	private final String thumbnailFilename;
 
-	private final long datasetSize;
-
 	private boolean active = false;
 
 	private SequenceDescriptionMinimal seq;
 
 	private Hdf5ImageLoader imgLoader;
 
-	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
+	/**
+	 * DataSet information holder
+	 */
+	private final DataSet dataSet;
+
+	public CellHandler( final String baseUrl, final DataSet dataSet, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		active = true;
 
+		this.dataSet = dataSet;
+
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
-		final SpimDataMinimal spimData = io.load( xmlFilename );
+		final SpimDataMinimal spimData = io.load( dataSet.getXmlPath() );
 		seq = spimData.getSequenceDescription();
 		imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
@@ -106,14 +105,14 @@ public class CellHandler extends ContextHandler
 
 		// dataSetURL property is used for providing the XML file by replace
 		// SequenceDescription>ImageLoader>baseUrl
-		this.xmlFilename = xmlFilename;
+		final String xmlFilename = dataSet.getXmlPath();
 		baseFilename = xmlFilename.endsWith( ".xml" ) ? xmlFilename.substring( 0, xmlFilename.length() - ".xml".length() ) : xmlFilename;
-		dataSetURL = baseUrl;
+		dataSet.setDatasetUrl( baseUrl );
 
 		datasetXmlString = buildRemoteDatasetXML( io, spimData, baseUrl );
 		metadataJson = buildMetadataJsonString( imgLoader, seq );
 		settingsXmlString = buildSettingsXML( baseFilename );
-		thumbnailFilename = createThumbnail( spimData, baseFilename, datasetName, thumbnailsDirectory );
+		thumbnailFilename = createThumbnail( spimData, baseFilename, dataSet.getName(), thumbnailsDirectory );
 
 		// Calculate dataset size based on the partitions
 		long size = new File( xmlFilename.replace( ".xml", ".h5" ) ).length();
@@ -124,7 +123,7 @@ public class CellHandler extends ContextHandler
 				size += new File( partition.getPath() ).length();
 			}
 
-		datasetSize = size;
+		dataSet.setSize( size );
 	}
 
 	@Override
@@ -218,24 +217,19 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
-	public String getXmlFile()
+	public void setDescription(String desc)
 	{
-		return xmlFilename;
+		dataSet.setDescription( desc );
 	}
 
-	public String getDataSetURL()
+	public void setCategory(String cate)
 	{
-		return dataSetURL;
+		dataSet.setCategory( cate );
 	}
 
-	public String getThumbnailUrl()
+	public void setIndex(String idx)
 	{
-		return dataSetURL + "png";
-	}
-
-	public String getDescription()
-	{
-		throw new UnsupportedOperationException();
+		dataSet.setIndex( idx );
 	}
 
 	/**
@@ -338,7 +332,7 @@ public class CellHandler extends ContextHandler
 	 */
 	public long getDataSetSize()
 	{
-		return datasetSize;
+		return dataSet.getSize();
 	}
 
 	/**
@@ -369,5 +363,15 @@ public class CellHandler extends ContextHandler
 			imgLoader = null;
 			cache = null;
 		}
+	}
+
+	/**
+	 * Gets data set.
+	 *
+	 * @return the data set
+	 */
+	public DataSet getDataSet()
+	{
+		return dataSet;
 	}
 }

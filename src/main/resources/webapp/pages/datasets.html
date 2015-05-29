@@ -29,6 +29,9 @@
     <!-- Custom Fonts -->
     <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css">
 
+
+    <link href="../css/bootstrap-editable.css" rel="stylesheet"/>
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -92,7 +95,10 @@
                                 <thead>
                                 <tr>
                                     <th>Active</th>
+                                    <th>Category</th>
+                                    <th>Index</th>
                                     <th>Name</th>
+                                    <th>Description</th>
                                     <th>Path</th>
                                 </tr>
                                 </thead>
@@ -106,6 +112,12 @@
                                 <div class="input-group">
                                     <span class="input-group-addon" id="basic-addon1">Dataset</span>
                                     <input name="ds" id="ds" type="text" class="form-control" placeholder="Name"
+                                           aria-describedby="basic-addon1"/>
+                                    <input name="category" id="category" type="text" class="form-control" placeholder="Category"
+                                           aria-describedby="basic-addon1"/>
+                                    <input name="description" id="description" type="text" class="form-control" placeholder="Description"
+                                           aria-describedby="basic-addon1"/>
+                                    <input name="index" id="index" type="text" class="form-control" placeholder="Index number"
                                            aria-describedby="basic-addon1"/>
                                     <input name="file" id="file" type="text" class="form-control" placeholder="Location"
                                            aria-describedby="basic-addon1"/>
@@ -156,6 +168,8 @@
 <script src="../js/jquery.dataTables.min.js"></script>
 <script src="../js/dataTables.bootstrap.min.js"></script>
 
+<script src="../js/bootstrap-editable.min.js"></script>
+
 <!-- Custom Theme JavaScript -->
 <script src="../js/bdserver.js"></script>
 
@@ -164,6 +178,7 @@
     var dataTable = null;
 
     $(document).ready(function () {
+
         dataTable = $('#dataTables').DataTable({
             autoWidth: false,
             responsive: true,
@@ -178,15 +193,42 @@
                     },
                     className: "dt-body-center"
                 },
-                { "data": "name" },
-                { "data": "path" }
+                { data: "category",
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return '<a href="#" id="category" class="category" data-type="text" data-pk="' + row.name + '" data-url="/manager/?op=updateDS" data-title="Enter category">' + data + '</a>';
+                        }
+                        return data;
+                    }
+                },
+                { data: "index",
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return '<a href="#" id="index" class="index" data-type="text" data-pk="' + row.name + '" data-url="/manager/?op=updateDS" data-title="Enter index">' + data + '</a>';
+                        }
+                        return data;
+                    }
+                },
+                { data: "name" },
+                { data: "description",
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return '<a href="#" id="description" class="description" data-type="text" data-pk="' + row.name + '" data-url="/manager/?op=updateDS" data-title="Enter description">' + data + '</a>';
+                        }
+                        return data;
+                    }
+                },
+                { data: "path" }
             ],
             ajax: "/manager/?op=getDatasets",
             rowCallback: function (row, data) {
                 // Set the checked state of the checkbox in the table
                 $('input.editor-active', row).prop('checked', data.active == true);
+                $('a', row).editable();
             }
         });
+
+        $.fn.editable.defaults.mode = 'inline';
 
         $('#dataTables').on('change', 'input.editor-active', function () {
             $.ajax({
@@ -203,7 +245,11 @@
             $.ajax({
                 type: "POST",
                 url: "/manager/?op=deploy",
-                data: { ds: $('#ds').val(), file: $('#file').val() },
+                data: { ds: $('#ds').val(),
+                    category: $('#category').val(),
+                    index: $('#index').val(),
+                    description: $('#description').val(),
+                    file: $('#file').val() },
                 success: function (msg) {
                     if (msg.match("^Error")) {
                         $('#error').html(msg);

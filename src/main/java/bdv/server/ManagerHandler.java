@@ -1,5 +1,6 @@
 package bdv.server;
 
+import bdv.model.DataSet;
 import com.google.gson.stream.JsonWriter;
 import mpicbg.spim.data.SpimDataException;
 
@@ -104,8 +105,11 @@ public class ManagerHandler extends ContextHandler
 			if ( op.equals( "deploy" ) )
 			{
 				final String ds = request.getParameter( "ds" );
+				final String category = request.getParameter( "category" );
+				final String description = request.getParameter( "description" );
+				final String index = request.getParameter( "index" );
 				final String file = request.getParameter( "file" );
-				deploy( ds, file, baseRequest, response );
+				deploy( ds, category, description, index, file, baseRequest, response );
 			}
 			else if ( op.equals( "undeploy" ) )
 			{
@@ -135,6 +139,15 @@ public class ManagerHandler extends ContextHandler
 				final String datasetName = request.getParameter( "name" );
 				final String activated = request.getParameter( "active" );
 				activateDataset( datasetName, activated, baseRequest, response );
+			}
+			else if ( op.equals( "updateDS" ) )
+			{
+				// UpdateDS uses x-editable
+				// Please, refer http://vitalets.github.io/x-editable/docs.html
+				final String field = request.getParameter( "name" );
+				final String datasetName = request.getParameter( "pk" );
+				final String value = request.getParameter( "value" );
+				updateDataSet( datasetName, field, value, baseRequest, response );
 			}
 		}
 		else
@@ -170,7 +183,7 @@ public class ManagerHandler extends ContextHandler
 		}
 	}
 
-	private void deploy( final String datasetName, final String fileLocation, final Request baseRequest, final HttpServletResponse response ) throws IOException
+	private void deploy( final String datasetName, final String category, final String description, final String index, final String fileLocation, final Request baseRequest, final HttpServletResponse response ) throws IOException
 	{
 		LOG.info( "Add new context: " + datasetName );
 		final String context = "/" + datasetName;
@@ -190,9 +203,11 @@ public class ManagerHandler extends ContextHandler
 		if ( !alreadyExists )
 		{
 			CellHandler ctx = null;
+			final DataSet dataSet = new DataSet( datasetName, fileLocation, category, description, index );
+
 			try
 			{
-				ctx = new CellHandler( baseURL + context + "/", fileLocation, datasetName, thumbnailsDirectoryName );
+				ctx = new CellHandler( baseURL + context + "/", dataSet, thumbnailsDirectoryName );
 			}
 			catch ( final SpimDataException e )
 			{
@@ -344,8 +359,11 @@ public class ManagerHandler extends ContextHandler
 			final CellHandler contextHandler = ( CellHandler ) handler;
 			writer.beginObject();
 			writer.name( "active" ).value( contextHandler.isActive() );
-			writer.name( "name" ).value( contextHandler.getContextPath().replaceFirst( "/", "" ) );
-			writer.name( "path" ).value( contextHandler.getXmlFile() );
+			writer.name( "category" ).value( contextHandler.getDataSet().getCategory() );
+			writer.name( "name" ).value( contextHandler.getDataSet().getName() );
+			writer.name( "index" ).value( contextHandler.getDataSet().getIndex() );
+			writer.name( "description" ).value( contextHandler.getDataSet().getDescription() );
+			writer.name( "path" ).value( contextHandler.getDataSet().getXmlPath() );
 			writer.endObject();
 		}
 
@@ -385,7 +403,6 @@ public class ManagerHandler extends ContextHandler
 
 	private void activateDataset( String datasetName, String activated, Request baseRequest, HttpServletResponse response ) throws IOException
 	{
-		//		System.out.println(datasetName + ":" + activated);
 		response.setContentType( "text/html" );
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
@@ -411,5 +428,31 @@ public class ManagerHandler extends ContextHandler
 		final PrintWriter ow = response.getWriter();
 		ow.write( datasetName + " active:" + activated );
 		ow.close();
+	}
+
+	private void updateDataSet( String datasetName, String field, String value, Request baseRequest, HttpServletResponse response ) throws IOException
+	{
+		response.setContentType( "text/html" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final String context = "/" + datasetName;
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		{
+			final CellHandler contextHandler = ( CellHandler ) handler;
+			if ( context.equals( contextHandler.getContextPath() ) )
+			{
+				final DataSet dataSet = contextHandler.getDataSet();
+
+				if ( field.equals( "category" ) )
+					dataSet.setCategory( value );
+				else if ( field.equals( "index" ) )
+					dataSet.setIndex( value );
+				else if ( field.equals( "description" ) )
+					dataSet.setDescription( value );
+
+				break;
+			}
+		}
 	}
 }

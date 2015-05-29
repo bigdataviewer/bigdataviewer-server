@@ -1,5 +1,6 @@
 package bdv.server;
 
+import bdv.model.DataSet;
 import com.google.gson.stream.JsonWriter;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -12,6 +13,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 /**
  * Provides a list of available datasets on this {@link BigDataServer}
@@ -64,7 +68,8 @@ public class JsonDatasetListHandler extends ContextHandler
 
 	private String getContexts( final JsonWriter writer ) throws IOException
 	{
-		final StringBuilder sb = new StringBuilder();
+		final ArrayList<DataSet> list = new ArrayList<>();
+
 		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
 		{
 			CellHandler contextHandler = null;
@@ -74,23 +79,53 @@ public class JsonDatasetListHandler extends ContextHandler
 
 				if ( contextHandler.isActive() )
 				{
-					final String datasetName = contextHandler.getContextPath().replaceFirst( "/", "" );
+					list.add( contextHandler.getDataSet() );
 
-					writer.name( datasetName ).beginObject();
-
-					writer.name( "id" ).value( datasetName );
-
-					//writer.name( "desc" ).value( contextHandler.getDescription() );
-					writer.name( "description" ).value( "NotImplemented" );
-
-					writer.name( "thumbnailUrl" ).value( contextHandler.getThumbnailUrl() );
-
-					writer.name( "datasetUrl" ).value( contextHandler.getDataSetURL() );
-
-					writer.endObject();
 				}
 			}
 		}
+
+		// Sort the list by Category and Index
+		Collections.sort( list, new Comparator< DataSet >()
+		{
+			@Override
+			public int compare( final DataSet lhs, DataSet rhs )
+			{
+				// return 1 if rhs should be before lhs
+				// return -1 if lhs should be before rhs
+				// return 0 otherwise
+				if( lhs.getCategory().equals( rhs.getCategory() ))
+				{
+					return lhs.getIndex().compareToIgnoreCase( rhs.getIndex() );
+				}
+				else
+				{
+					return lhs.getCategory().compareToIgnoreCase( rhs.getCategory() );
+				}
+			}
+		} );
+
+		// Buld json list
+		final StringBuilder sb = new StringBuilder();
+		for(DataSet ds : list)
+		{
+			writer.name( ds.getName() ).beginObject();
+
+			writer.name( "id" ).value( ds.getName() );
+
+			writer.name( "category" ).value( ds.getCategory() );
+
+			writer.name( "description" ).value( ds.getDescription() );
+
+			writer.name( "index" ).value( ds.getIndex() );
+
+			writer.name( "thumbnailUrl" ).value( ds.getThumbnailUrl() );
+
+			writer.name( "datasetUrl" ).value( ds.getDatasetUrl() );
+
+			writer.endObject();
+		}
+
 		return sb.toString();
 	}
 }
