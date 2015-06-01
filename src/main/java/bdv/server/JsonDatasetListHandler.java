@@ -2,6 +2,7 @@ package bdv.server;
 
 import bdv.model.DataSet;
 import com.google.gson.stream.JsonWriter;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -35,7 +36,26 @@ public class JsonDatasetListHandler extends ContextHandler
 	@Override
 	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		list( baseRequest, response );
+		final String category = request.getParameter( "category" );
+		if ( StringUtils.isEmpty( category ) )
+		{
+			list( baseRequest, response );
+		}
+		else
+		{
+			listCategory( category, baseRequest, response );
+		}
+	}
+
+	private void listCategory( String category, Request baseRequest, HttpServletResponse response ) throws IOException
+	{
+		response.setContentType( "application/json" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final PrintWriter ow = response.getWriter();
+		getJsonDatasetList( category, ow );
+		ow.close();
 	}
 
 	private void list( final Request baseRequest, final HttpServletResponse response ) throws IOException
@@ -45,11 +65,11 @@ public class JsonDatasetListHandler extends ContextHandler
 		baseRequest.setHandled( true );
 
 		final PrintWriter ow = response.getWriter();
-		getJsonDatasetList( ow );
+		getJsonDatasetList( null, ow );
 		ow.close();
 	}
 
-	private void getJsonDatasetList( final PrintWriter out ) throws IOException
+	private void getJsonDatasetList( String category, final PrintWriter out ) throws IOException
 	{
 		final JsonWriter writer = new JsonWriter( out );
 
@@ -57,7 +77,7 @@ public class JsonDatasetListHandler extends ContextHandler
 
 		writer.beginObject();
 
-		getContexts( writer );
+		getContexts( category, writer );
 
 		writer.endObject();
 
@@ -66,7 +86,7 @@ public class JsonDatasetListHandler extends ContextHandler
 		writer.close();
 	}
 
-	private String getContexts( final JsonWriter writer ) throws IOException
+	private String getContexts( final String category, final JsonWriter writer ) throws IOException
 	{
 		final ArrayList<DataSet> list = new ArrayList<>();
 
@@ -79,8 +99,9 @@ public class JsonDatasetListHandler extends ContextHandler
 
 				if ( contextHandler.isActive() )
 				{
-					list.add( contextHandler.getDataSet() );
-
+					if ( null == category ||
+							( null != category && contextHandler.getDataSet().getCategory().equals( category ) ) )
+						list.add( contextHandler.getDataSet() );
 				}
 			}
 		}
