@@ -229,6 +229,9 @@ public class ManagerHandler extends ContextHandler
 			}
 		}
 
+		// Store the new dataset
+		updateDataSetList();
+
 		response.setContentType( "text/html" );
 		response.setStatus( HttpServletResponse.SC_OK );
 		baseRequest.setHandled( true );
@@ -267,6 +270,9 @@ public class ManagerHandler extends ContextHandler
 				break;
 			}
 		}
+
+		// Store the new dataset
+		updateDataSetList();
 
 		response.setContentType( "text/html" );
 		response.setStatus( HttpServletResponse.SC_OK );
@@ -456,6 +462,21 @@ public class ManagerHandler extends ContextHandler
 			}
 		}
 
+		try
+		{
+			updateDataSetList();
+		}
+		catch ( IOException ioexception )
+		{
+			response.setStatus( HttpServletResponse.SC_BAD_REQUEST );
+			final PrintWriter ow = response.getWriter();
+			ow.write( "The dataset list is not stored. " + ioexception.getMessage() );
+			ow.close();
+		}
+	}
+
+	private void updateDataSetList() throws IOException
+	{
 		// Save the datasets in the given list file
 		final ArrayList< DataSet > list = new ArrayList<>();
 
@@ -474,16 +495,6 @@ public class ManagerHandler extends ContextHandler
 			}
 		}
 
-		try
-		{
-			DataSet.storeDataSet( list );
-		}
-		catch ( IOException ioexception )
-		{
-			response.setStatus( HttpServletResponse.SC_BAD_REQUEST );
-			final PrintWriter ow = response.getWriter();
-			ow.write( "The dataset list is not stored. " + ioexception.getMessage() );
-			ow.close();
-		}
+		DataSet.storeDataSet( list );
 	}
 }

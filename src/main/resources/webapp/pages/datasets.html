@@ -113,11 +113,14 @@
                                     <span class="input-group-addon" id="basic-addon1">Dataset</span>
                                     <input name="ds" id="ds" type="text" class="form-control" placeholder="Name"
                                            aria-describedby="basic-addon1"/>
-                                    <input name="category" id="category" type="text" class="form-control" placeholder="Category"
+                                    <input name="category-text" id="category-text" type="text" class="form-control"
+                                           placeholder="Category"
                                            aria-describedby="basic-addon1"/>
-                                    <input name="description" id="description" type="text" class="form-control" placeholder="Description"
+                                    <input name="description-text" id="description-text" type="text"
+                                           class="form-control" placeholder="Description"
                                            aria-describedby="basic-addon1"/>
-                                    <input name="index" id="index" type="text" class="form-control" placeholder="Index number"
+                                    <input name="index-number" id="index-number" type="text-number" class="form-control"
+                                           placeholder="Index number"
                                            aria-describedby="basic-addon1"/>
                                     <input name="file" id="file" type="text" class="form-control" placeholder="Location"
                                            aria-describedby="basic-addon1"/>
@@ -250,9 +253,9 @@
                 type: "POST",
                 url: "/manager/?op=deploy",
                 data: { ds: $('#ds').val(),
-                    category: $('#category').val(),
-                    index: $('#index').val(),
-                    description: $('#description').val(),
+                    category: $('#category-text').val(),
+                    index: $('#index-number').val(),
+                    description: $('#description-text').val(),
                     file: $('#file').val() },
                 success: function (msg) {
                     if (msg.match("^Error")) {
@@ -260,6 +263,7 @@
                         $('#error').fadeIn(600).delay(5000).fadeOut(600);
                     }
                     else if (msg.match("^Success")) {
+                        $('.form-control').val("");
                         $('#success').html(msg);
                         $('#success').fadeIn(600).delay(5000).fadeOut(600);
                         dataTable.ajax.reload();
@@ -281,6 +285,7 @@
                         $('#error').fadeIn(600).delay(5000).fadeOut(600);
                     }
                     else if (msg.match("^Success")) {
+                        $('.form-control').val("");
                         $('#success').html(msg);
                         $('#success').fadeIn(600).delay(5000).fadeOut(600);
                         dataTable.ajax.reload();
