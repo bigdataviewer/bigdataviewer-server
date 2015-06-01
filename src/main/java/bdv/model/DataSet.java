@@ -1,10 +1,18 @@
 package bdv.model;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+
 /**
  * DataSet class holds SPIM dataset information
  */
 public class DataSet
 {
+	private static Path dataSetListPath;
 	/**
 	 * DataSet Context name of this {@link bdv.server.CellHandler} is serving.
 	 */
@@ -39,6 +47,16 @@ public class DataSet
 		this.category = category;
 		this.description = description;
 		this.index = index;
+	}
+
+	/**
+	 * Sets dataSetList path.
+	 *
+	 * @param dataSetListPath the data set list path
+	 */
+	public static void setDataSetListPath( Path dataSetListPath )
+	{
+		DataSet.dataSetListPath = dataSetListPath;
 	}
 
 	/**
@@ -169,5 +187,33 @@ public class DataSet
 	public void setDatasetUrl( String datasetUrl )
 	{
 		this.datasetUrl = datasetUrl;
+	}
+
+	/**
+	 * Store datasets
+	 * @param list the dataset list
+	 * @throws IOException the iO exception
+	 */
+	public static void storeDataSet( ArrayList< DataSet > list ) throws IOException
+	{
+		if ( dataSetListPath != null )
+		{
+			BufferedWriter writer = Files.newBufferedWriter( dataSetListPath, StandardCharsets.UTF_8 );
+			for ( DataSet ds : list )
+			{
+				writer.write( ds.getName() );
+				writer.write( '\t' );
+				writer.write( ds.getXmlPath() );
+				writer.write( '\t' );
+				writer.write( ds.getCategory() );
+				writer.write( '\t' );
+				writer.write( ds.getDescription() );
+				writer.write( '\t' );
+				writer.write( ds.getIndex() );
+				writer.write( '\n' );
+			}
+			writer.flush();
+			writer.close();
+		}
 	}
 }

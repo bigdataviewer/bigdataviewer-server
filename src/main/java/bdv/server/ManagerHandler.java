@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -453,6 +454,36 @@ public class ManagerHandler extends ContextHandler
 
 				break;
 			}
+		}
+
+		// Save the datasets in the given list file
+		final ArrayList< DataSet > list = new ArrayList<>();
+
+		for ( final Handler handler : server.getChildHandlersByClass( CellHandler.class ) )
+		{
+			CellHandler contextHandler = null;
+			if ( handler instanceof CellHandler )
+			{
+				contextHandler = ( CellHandler ) handler;
+
+				if ( contextHandler.isActive() )
+				{
+					list.add( contextHandler.getDataSet() );
+
+				}
+			}
+		}
+
+		try
+		{
+			DataSet.storeDataSet( list );
+		}
+		catch ( IOException ioexception )
+		{
+			response.setStatus( HttpServletResponse.SC_BAD_REQUEST );
+			final PrintWriter ow = response.getWriter();
+			ow.write( "The dataset list is not stored. " + ioexception.getMessage() );
+			ow.close();
 		}
 	}
 }

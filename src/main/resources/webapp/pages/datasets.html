@@ -29,7 +29,7 @@
     <!-- Custom Fonts -->
     <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css">
 
-
+    <!-- Bootstrap editable -->
     <link href="../css/bootstrap-editable.css" rel="stylesheet"/>
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -224,7 +224,11 @@
             rowCallback: function (row, data) {
                 // Set the checked state of the checkbox in the table
                 $('input.editor-active', row).prop('checked', data.active == true);
-                $('a', row).editable();
+                $('a', row).editable({
+                    success: function(response, newValue) {
+                        if(response.status == 'error') return response.msg; //msg will be shown in editable form
+                    }
+                });
             }
         });
 

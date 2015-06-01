@@ -320,6 +320,7 @@ public class BigDataServer
 					throw new IllegalArgumentException( "Dataset list file does not exist." );
 
 				// Process dataset list file
+				DataSet.setDataSetListPath( path );
 				final List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
 
 				for ( final String str : lines )
