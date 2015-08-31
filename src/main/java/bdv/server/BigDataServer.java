@@ -280,8 +280,14 @@ public class BigDataServer
 		if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
 		{
 			options.addOption( OptionBuilder
-					.withDescription( "enable statistics and manager context. EXPERIMENTAL!" )
+					.withDescription( "Enable statistics and manager context. EXPERIMENTAL!" )
 					.create( "m" ) );
+
+			options.addOption( OptionBuilder
+					.withDescription( "Manager context HTTPS port. EXPERIMENTAL!" + "\n(default: " + Constants.SECURE_PORT + ")" )
+					.hasArg()
+					.withArgName( "SECURE_PORT" )
+					.create( "mp" ) );
 		}
 
 		try
@@ -305,7 +311,12 @@ public class BigDataServer
 			if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
 			{
 				if ( cmd.hasOption( "m" ) )
+				{
 					enableManagerContext = true;
+
+					final String securePortString = cmd.getOptionValue( "mp", Integer.toString( Constants.SECURE_PORT ) );
+					Constants.SECURE_PORT = Integer.parseInt( securePortString );
+				}
 			}
 
 			if ( cmd.hasOption( "d" ) )

@@ -18,5 +18,5 @@ public class Constants
 
 	public static final boolean ENABLE_EXPERIMENTAL_FEATURES = false;
 
-	public static final int SECURE_PORT = 8443;
+	public static int SECURE_PORT = 8443;
 }
