@@ -59,6 +59,7 @@ public class BigDataServer
 	static Parameters getDefaultParameters()
 	{
 		final int port = 8080;
+		final int sslPort = 8443;
 		String hostname;
 		try
 		{
@@ -70,7 +71,7 @@ public class BigDataServer
 		}
 		final String thumbnailDirectory = null;
 		final boolean enableManagerContext = false;
-		return new Parameters( port, hostname, new HashMap< String, DataSet >(), thumbnailDirectory, enableManagerContext );
+		return new Parameters( port, sslPort, hostname, new HashMap< String, DataSet >(), thumbnailDirectory, enableManagerContext );
 	}
 
 	public static void main( final String[] args ) throws Exception
@@ -89,7 +90,7 @@ public class BigDataServer
 		// HTTP Configuration
 		HttpConfiguration httpConfig = new HttpConfiguration();
 		httpConfig.setSecureScheme( "https" );
-		httpConfig.setSecurePort( Constants.SECURE_PORT );
+		httpConfig.setSecurePort( params.getSslport() );
 
 		// Setup buffers on http
 		HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory( httpConfig );
@@ -127,7 +128,7 @@ public class BigDataServer
 					new SslConnectionFactory( sslContextFactory, "http/1.1" ),
 					new HttpConnectionFactory( https ) );
 			sslConnector.setHost( params.getHostname() );
-			sslConnector.setPort( Constants.SECURE_PORT );
+			sslConnector.setPort( params.getSslport() );
 
 			server.addConnector( sslConnector );
 
@@ -183,13 +184,15 @@ public class BigDataServer
 	}
 
 	/**
-	 * Server parameters: hostname, port, datasets.
+	 * Server parameters: hostname, port, sslPort, datasets.
 	 */
 	private static class Parameters
 	{
 		private final int port;
 
 		private final String hostname;
+
+		private final int sslPort;
 
 		/**
 		 * maps from dataset name to dataset xml path.
@@ -200,9 +203,10 @@ public class BigDataServer
 
 		private final boolean enableManagerContext;
 
-		Parameters( final int port, final String hostname, final Map< String, DataSet > datasetNameToDataSet, final String thumbnailDirectory, final boolean enableManagerContext )
+		Parameters( final int port, final int sslPort, final String hostname, final Map< String, DataSet > datasetNameToDataSet, final String thumbnailDirectory, final boolean enableManagerContext )
 		{
 			this.port = port;
+			this.sslPort = sslPort;
 			this.hostname = hostname;
 			this.datasetNameToDataSet = datasetNameToDataSet;
 			this.thumbnailDirectory = thumbnailDirectory;
@@ -217,6 +221,11 @@ public class BigDataServer
 		public String getHostname()
 		{
 			return hostname;
+		}
+
+		public int getSslport()
+		{
+			return sslPort;
 		}
 
 		public String getThumbnailDirectory()
@@ -284,7 +293,7 @@ public class BigDataServer
 					.create( "m" ) );
 
 			options.addOption( OptionBuilder
-					.withDescription( "Manager context HTTPS port. EXPERIMENTAL!" + "\n(default: " + Constants.SECURE_PORT + ")" )
+					.withDescription( "Manager context HTTPS port. EXPERIMENTAL!" + "\n(default: " + defaultParameters.getSslport() + ")" )
 					.hasArg()
 					.withArgName( "SECURE_PORT" )
 					.create( "mp" ) );
@@ -308,14 +317,15 @@ public class BigDataServer
 			final HashMap< String, DataSet > datasets = new HashMap< String, DataSet >( defaultParameters.getDatasets() );
 
 			boolean enableManagerContext = false;
+			int sslPort = defaultParameters.getSslport();
 			if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
 			{
 				if ( cmd.hasOption( "m" ) )
 				{
 					enableManagerContext = true;
 
-					final String securePortString = cmd.getOptionValue( "mp", Integer.toString( Constants.SECURE_PORT ) );
-					Constants.SECURE_PORT = Integer.parseInt( securePortString );
+					final String securePortString = cmd.getOptionValue( "mp", Integer.toString( defaultParameters.getSslport() ) );
+					sslPort = Integer.parseInt( securePortString );
 				}
 			}
 
@@ -365,7 +375,7 @@ public class BigDataServer
 				tryAddDataset( datasets, name, xmlpath );
 			}
 
-			return new Parameters( port, serverName, datasets, thumbnailDirectory, enableManagerContext );
+			return new Parameters( port, sslPort, serverName, datasets, thumbnailDirectory, enableManagerContext );
 		}
 		catch ( final ParseException | IllegalArgumentException e )
 		{

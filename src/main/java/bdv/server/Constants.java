@@ -7,16 +7,14 @@ public class Constants
 	public static final String MANAGER_CONTEXT_NAME = "manager";
 
 	public static final String[] RESERVED_CONTEXT_NAMES = new String[]
-	{
-			DATASETLIST_CONTEXT_NAME,
-			MANAGER_CONTEXT_NAME
-	};
+			{
+					DATASETLIST_CONTEXT_NAME,
+					MANAGER_CONTEXT_NAME
+			};
 
 	public static final int THUMBNAIL_WIDTH = 100;
 
 	public static final int THUMBNAIL_HEIGHT = 100;
 
 	public static final boolean ENABLE_EXPERIMENTAL_FEATURES = false;
-
-	public static int SECURE_PORT = 8443;
 }
