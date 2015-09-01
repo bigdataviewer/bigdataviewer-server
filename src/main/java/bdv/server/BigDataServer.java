@@ -319,6 +319,8 @@ public class BigDataServer
 				}
 			}
 
+			// Path for holding the dataset file
+			Path readDatasetFilePath;
 			if ( cmd.hasOption( "d" ) )
 			{
 				// process the file given with "-d"
@@ -330,37 +332,25 @@ public class BigDataServer
 				if ( Files.notExists( path ) )
 					throw new IllegalArgumentException( "Dataset list file does not exist." );
 
-				// Process dataset list file
-				DataSet.setDataSetListPath( path );
-				final List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
-
-				for ( final String str : lines )
-				{
-					final String[] tokens = str.split( "\\s*\\t\\s*" );
-					if ( tokens.length >= 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
-					{
-						final String name = tokens[ 0 ].trim();
-						final String xmlpath = tokens[ 1 ].trim();
-
-						if( tokens.length == 2 )
-						{
-							tryAddDataset( datasets, name, xmlpath );
-						}
-						else if ( tokens.length == 5)
-						{
-							final String category = tokens[2].trim();
-							final String desc = tokens[3].trim();
-							final String index = tokens[4].trim();
-
-							tryAddDataset( datasets, name, xmlpath, category, desc, index );
-						}
-					}
-					else
-					{
-						LOG.warn( "Invalid dataset file line (will be skipped): {" + str + "}" );
-					}
-				}
+				readDatasetFilePath = path;
 			}
+			else
+			{
+				// If the user does not provide any dataset file,
+				// we keep the adding dataset in {Working folder}/.data/list.txt
+				final Path datasetFileFolderPath = Paths.get( System.getProperty( "user.dir" ) + "/.data" );
+
+				if ( Files.notExists( datasetFileFolderPath ) )
+					Files.createDirectory( datasetFileFolderPath );
+
+				final Path datasetFilePath = Paths.get( System.getProperty( "user.dir" ) + "/.data/list.txt" );
+
+				if ( Files.notExists( datasetFilePath ) )
+					Files.createFile( datasetFilePath );
+
+				readDatasetFilePath = datasetFilePath;
+			}
+			readDatasetFile( datasets, readDatasetFilePath );
 
 			// process additional {name, name.xml} pairs given on the
 			// command-line
@@ -375,9 +365,6 @@ public class BigDataServer
 				tryAddDataset( datasets, name, xmlpath );
 			}
 
-			if ( datasets.isEmpty() )
-				throw new IllegalArgumentException( "Dataset list is empty." );
-
 			return new Parameters( port, serverName, datasets, thumbnailDirectory, enableManagerContext );
 		}
 		catch ( final ParseException | IllegalArgumentException e )
@@ -387,6 +374,40 @@ public class BigDataServer
 			formatter.printHelp( cmdLineSyntax, description, options, null );
 		}
 		return null;
+	}
+
+	private static void readDatasetFile( final HashMap< String, DataSet > datasets, final Path path ) throws IOException
+	{
+		// Process dataset list file
+		DataSet.setDataSetListPath( path );
+		final List< String > lines = Files.readAllLines( path, StandardCharsets.UTF_8 );
+
+		for ( final String str : lines )
+		{
+			final String[] tokens = str.split( "\\s*\\t\\s*" );
+			if ( tokens.length >= 2 && StringUtils.isNotEmpty( tokens[ 0 ].trim() ) && StringUtils.isNotEmpty( tokens[ 1 ].trim() ) )
+			{
+				final String name = tokens[ 0 ].trim();
+				final String xmlpath = tokens[ 1 ].trim();
+
+				if ( tokens.length == 2 )
+				{
+					tryAddDataset( datasets, name, xmlpath );
+				}
+				else if ( tokens.length == 5 )
+				{
+					final String category = tokens[ 2 ].trim();
+					final String desc = tokens[ 3 ].trim();
+					final String index = tokens[ 4 ].trim();
+
+					tryAddDataset( datasets, name, xmlpath, category, desc, index );
+				}
+			}
+			else
+			{
+				LOG.warn( "Invalid dataset file line (will be skipped): {" + str + "}" );
+			}
+		}
 	}
 
 	private static void tryAddDataset( final HashMap< String, DataSet > datasetNameToDataSet, final String ... args ) throws IllegalArgumentException
