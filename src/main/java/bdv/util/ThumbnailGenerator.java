@@ -26,6 +26,7 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.tools.transformation.XmlIoTransformedSources;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.render.AccumulateProjectorARGB;
 import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.SourceState;
@@ -93,7 +94,7 @@ public class ThumbnailGenerator
 			}
 		}
 		final ThumbnailTarget renderTarget = new ThumbnailTarget();
-		new MultiResolutionRenderer( renderTarget, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, new Cache.Dummy() ).paint( state );
+		new MultiResolutionRenderer( renderTarget, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, AccumulateProjectorARGB.factory, new Cache.Dummy() ).paint( state );
 		return renderTarget.bi;
 	}
 

@@ -1,20 +1,18 @@
 package bdv.server;
 
-import bdv.BigDataViewer;
-import bdv.img.cache.CacheHints;
-import bdv.img.cache.LoadingStrategy;
-import bdv.img.cache.VolatileCell;
-import bdv.img.cache.VolatileGlobalCellCache;
-import bdv.img.hdf5.Hdf5ImageLoader;
-import bdv.img.remote.AffineTransform3DJsonSerializer;
-import bdv.img.remote.RemoteImageLoader;
-import bdv.img.remote.RemoteImageLoaderMetaData;
-import bdv.spimdata.SequenceDescriptionMinimal;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.XmlIoSpimDataMinimal;
-import bdv.util.ThumbnailGenerator;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import com.google.gson.GsonBuilder;
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
@@ -29,21 +27,30 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
-import javax.imageio.ImageIO;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import bdv.BigDataViewer;
+import bdv.img.cache.CacheHints;
+import bdv.img.cache.LoadingStrategy;
+import bdv.img.cache.VolatileCell;
+import bdv.img.cache.VolatileGlobalCellCache;
+import bdv.img.hdf5.Hdf5ImageLoader;
+import bdv.img.hdf5.Hdf5VolatileShortArrayLoader;
+import bdv.img.remote.AffineTransform3DJsonSerializer;
+import bdv.img.remote.RemoteImageLoader;
+import bdv.img.remote.RemoteImageLoaderMetaData;
+import bdv.spimdata.SequenceDescriptionMinimal;
+import bdv.spimdata.SpimDataMinimal;
+import bdv.spimdata.XmlIoSpimDataMinimal;
+import bdv.util.ThumbnailGenerator;
 
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import com.google.gson.GsonBuilder;
 
 public class CellHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
 
-	private final VolatileGlobalCellCache< VolatileShortArray > cache;
+	private final VolatileGlobalCellCache cache;
+
+	private final Hdf5VolatileShortArrayLoader loader;
 
 	private final CacheHints cacheHints;
 
@@ -91,6 +98,7 @@ public class CellHandler extends ContextHandler
 		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
 		cache = imgLoader.getCache();
+		loader = imgLoader.getShortArrayLoader();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
 
 		// dataSetURL property is used for providing the XML file by replace
@@ -136,7 +144,7 @@ public class CellHandler extends ContextHandler
 			final int timepoint = Integer.parseInt( parts[ 2 ] );
 			final int setup = Integer.parseInt( parts[ 3 ] );
 			final int level = Integer.parseInt( parts[ 4 ] );
-			VolatileCell< VolatileShortArray > cell = cache.getGlobalIfCached( timepoint, setup, level, index, cacheHints );
+			VolatileCell< ? > cell = cache.getGlobalIfCached( timepoint, setup, level, index, cacheHints );
 			if ( cell == null )
 			{
 				final int[] cellDims = new int[] {
@@ -147,10 +155,11 @@ public class CellHandler extends ContextHandler
 						Long.parseLong( parts[ 8 ] ),
 						Long.parseLong( parts[ 9 ] ),
 						Long.parseLong( parts[ 10 ] ) };
-				cell = cache.createGlobal( cellDims, cellMin, timepoint, setup, level, index, cacheHints );
+				cell = cache.createGlobal( cellDims, cellMin, timepoint, setup, level, index, cacheHints, loader );
 			}
 
-			final short[] data = cell.getData().getCurrentStorageArray();
+			@SuppressWarnings( "unchecked" )
+			final short[] data = ( ( VolatileCell< VolatileShortArray > ) cell ).getData().getCurrentStorageArray();
 			final byte[] buf = new byte[ 2 * data.length ];
 			for ( int i = 0, j = 0; i < data.length; i++ )
 			{
