@@ -48,8 +48,8 @@ import java.util.Map.Entry;
  * To enable the {@code -m} option, build with
  * {@link Constants#ENABLE_EXPERIMENTAL_FEATURES} set to {@code true}.
  *
- * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
- * @author HongKee Moon <moon@mpi-cbg.de>
+ * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
+ * @author HongKee Moon &lt;moon@mpi-cbg.de&gt;
  */
 public class BigDataServer
 {

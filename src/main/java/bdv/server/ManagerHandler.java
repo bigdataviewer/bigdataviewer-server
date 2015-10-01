@@ -24,8 +24,8 @@ import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 
 /**
- * @author HongKee Moon <moon@mpi-cbg.de>
- * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
+ * @author HongKee Moon &lt;moon@mpi-cbg.de&gt;
+ * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
  */
 public class ManagerHandler extends ContextHandler
 {
