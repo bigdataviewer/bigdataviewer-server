@@ -1,5 +1,20 @@
 package bdv.util;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.imageio.ImageIO;
+
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.ui.PainterThread;
+import net.imglib2.ui.RenderTarget;
+
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.input.SAXBuilder;
+
 import bdv.BigDataViewer;
 import bdv.img.cache.Cache;
 import bdv.spimdata.SpimDataMinimal;
@@ -16,20 +31,6 @@ import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.SourceState;
 import bdv.viewer.state.ViewerState;
 import bdv.viewer.state.XmlIoViewerState;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.ui.PainterThread;
-import net.imglib2.ui.RenderTarget;
-
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.input.SAXBuilder;
-
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.imageio.ImageIO;
 
 /**
  * Created by moon on 2/5/15.
@@ -113,7 +114,7 @@ public class ThumbnailGenerator
 		final int numGroups = 10;
 		final ArrayList< SourceGroup > groups = new ArrayList< SourceGroup >( numGroups );
 		for ( int i = 0; i < numGroups; ++i )
-			groups.add( new SourceGroup( "" ) );
+			groups.add( new SourceGroup( "", null ) );
 
 		state = new ViewerState( sources, groups, numTimePoints );
 		if ( !sources.isEmpty() )

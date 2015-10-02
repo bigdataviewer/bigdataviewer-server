@@ -1,10 +1,10 @@
 .DS_Store
-**/..classpath
-**/.project
-**/.settings/
-**/target/
 *.orig
-.classpath
-.project
-.settings
-/target
+
+# Eclipse #
+/.classpath
+/.project
+/.settings/
+
+# Maven #
+/target/

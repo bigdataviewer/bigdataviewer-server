@@ -85,7 +85,7 @@ public class BigDataServer
 		final String thumbnailsDirectoryName = getThumbnailDirectoryPath( params );
 
 		// Threadpool for multiple connections
-		final Server server = new Server( new QueuedThreadPool( 1000, 10 ) );
+		final Server server = new Server( new QueuedThreadPool( 200, 8 ) );
 
 		// HTTP Configuration
 		HttpConfiguration httpConfig = new HttpConfiguration();
@@ -255,7 +255,7 @@ public class BigDataServer
 		// create Options object
 		final Options options = new Options();
 
-		final String cmdLineSyntax = "BigDataServer [OPTIONS] [NAME XML]...";
+		final String cmdLineSyntax = "BigDataServer [OPTIONS] [NAME XML] ...\n";
 
 		final String description =
 				"Serves one or more XML/HDF5 datasets for remote access over HTTP.\n" +
@@ -380,6 +380,7 @@ public class BigDataServer
 		catch ( final ParseException | IllegalArgumentException e )
 		{
 			LOG.warn( e.getMessage() );
+			System.out.println();
 			final HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp( cmdLineSyntax, description, options, null );
 		}
