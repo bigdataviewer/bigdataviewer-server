@@ -146,7 +146,7 @@ public class BigDataServer
 			constraint.setRoles( new String[] { "admin", "superuser" } );
 			constraint.setAuthenticate( true );
 			// 2 means CONFIDENTIAL. 1 means INTEGRITY
-			constraint.setDataConstraint( 2 );
+			constraint.setDataConstraint( Constraint.DC_CONFIDENTIAL );
 
 			ConstraintMapping cm = new ConstraintMapping();
 			cm.setPathSpec( "/manager/*" );
