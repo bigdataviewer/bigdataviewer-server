@@ -142,7 +142,7 @@ public class BigDataServer
 
 			final Constraint constraint = new Constraint();
 			constraint.setName( Constraint.__BASIC_AUTH );
-			constraint.setRoles( new String[] { "admin", "superuser" } );
+			constraint.setRoles( new String[] { "admin" } );
 			constraint.setAuthenticate( true );
 			// 2 means CONFIDENTIAL. 1 means INTEGRITY
 			constraint.setDataConstraint( Constraint.DC_CONFIDENTIAL );
