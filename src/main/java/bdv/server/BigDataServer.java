@@ -92,7 +92,7 @@ public class BigDataServer
 		httpConfig.setSecurePort( params.getSslport() );
 
 		// Setup buffers on http
-		HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory( httpConfig );
+		final HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory( httpConfig );
 		httpConnectionFactory.setInputBufferSize( 64 * 1024 );
 
 		// ServerConnector configuration
@@ -113,17 +113,17 @@ public class BigDataServer
 		Handler handler = handlers;
 		if ( params.enableManagerContext() )
 		{
-			HttpConfiguration https = new HttpConfiguration();
+			final HttpConfiguration https = new HttpConfiguration();
 			https.addCustomizer( new SecureRequestCustomizer() );
 
 			// Please, change localhost according to your site name
 			// keytool -genkey -alias localhost -keyalg RSA -keystore keystore.jks -keysize 2048
-			SslContextFactory sslContextFactory = new SslContextFactory();
+			final SslContextFactory sslContextFactory = new SslContextFactory();
 			sslContextFactory.setKeyStorePath( Resource.newClassPathResource( "etc/keystore.jks" ).toString() );
 			sslContextFactory.setKeyStorePassword( "123456" );
 			sslContextFactory.setKeyManagerPassword( "123456" );
 
-			ServerConnector sslConnector = new ServerConnector( server,
+			final ServerConnector sslConnector = new ServerConnector( server,
 					new SslConnectionFactory( sslContextFactory, "http/1.1" ),
 					new HttpConnectionFactory( https ) );
 			sslConnector.setHost( params.getHostname() );
@@ -140,30 +140,30 @@ public class BigDataServer
 			handlers.addHandler( new ManagerHandler( baseURL, server, connectorStats, statHandler, datasetHandlers, thumbnailsDirectoryName ) );
 			statHandler.setHandler( handlers );
 
-			Constraint constraint = new Constraint();
+			final Constraint constraint = new Constraint();
 			constraint.setName( Constraint.__BASIC_AUTH );
 			constraint.setRoles( new String[] { "admin", "superuser" } );
 			constraint.setAuthenticate( true );
 			// 2 means CONFIDENTIAL. 1 means INTEGRITY
 			constraint.setDataConstraint( Constraint.DC_CONFIDENTIAL );
 
-			ConstraintMapping cm = new ConstraintMapping();
-			cm.setPathSpec( "/manager/*" );
+			final ConstraintMapping cm = new ConstraintMapping();
+			cm.setPathSpec( "/ " + Constants.MANAGER_CONTEXT_NAME + "/*" );
 			cm.setConstraint( constraint );
 
 			// Please change the password in realm.properties
-			HashLoginService loginService = new HashLoginService( "BigDataServerRealm", Resource.newClassPathResource( "etc/realm.properties" ).toString() );
+			final HashLoginService loginService = new HashLoginService( "BigDataServerRealm", Resource.newClassPathResource( "etc/realm.properties" ).toString() );
 			server.addBean( loginService );
 
-			HandlerList handlerList = new HandlerList();
+			final HandlerList handlerList = new HandlerList();
 
-			ContextHandler redirectHandler = new ContextHandler();
+			final ContextHandler redirectHandler = new ContextHandler();
 			redirectHandler.setContextPath( "/" + Constants.MANAGER_CONTEXT_NAME );
 			redirectHandler.setHandler( new SecuredRedirectHandler() );
 
 			handlerList.addHandler( redirectHandler );
 
-			ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
+			final ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
 			sh.setLoginService( loginService );
 			sh.setAuthenticator( new BasicAuthenticator() );
 			sh.addConstraintMapping( cm );
