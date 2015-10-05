@@ -43,11 +43,10 @@ import java.util.Map.Entry;
  *  -s &lt;HOSTNAME&gt;   Hostname of the server.
  *  -t &lt;DIRECTORY&gt;  Directory to store thumbnails. (new temporary directory
  *                  by default.)
- *  -m              enable statistics and manager context. EXPERIMENTAL!
+ *  -m              Enable statistics and manager context.
+ *  -mp             Manager context HTTPS port.
  * </pre>
  *
- * To enable the {@code -m} option, build with
- * {@link Constants#ENABLE_EXPERIMENTAL_FEATURES} set to {@code true}.
  *
  * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
  * @author HongKee Moon <moon@mpi-cbg.de>
@@ -286,18 +285,15 @@ public class BigDataServer
 				.withArgName( "DIRECTORY" )
 				.create( "t" ) );
 
-		if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
-		{
-			options.addOption( OptionBuilder
-					.withDescription( "Enable statistics and manager context. EXPERIMENTAL!" )
-					.create( "m" ) );
+		options.addOption( OptionBuilder
+				.withDescription( "Enable statistics and manager context." )
+				.create( "m" ) );
 
-			options.addOption( OptionBuilder
-					.withDescription( "Manager context HTTPS port. EXPERIMENTAL!" + "\n(default: " + defaultParameters.getSslport() + ")" )
-					.hasArg()
-					.withArgName( "SECURE_PORT" )
-					.create( "mp" ) );
-		}
+		options.addOption( OptionBuilder
+				.withDescription( "Manager context HTTPS port." + "\n(default: " + defaultParameters.getSslport() + ")" )
+				.hasArg()
+				.withArgName( "SECURE_PORT" )
+				.create( "mp" ) );
 
 		try
 		{
@@ -318,18 +314,16 @@ public class BigDataServer
 
 			boolean enableManagerContext = false;
 			int sslPort = defaultParameters.getSslport();
-			if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
+
+			if ( cmd.hasOption( "m" ) )
 			{
-				if ( cmd.hasOption( "m" ) )
-				{
-					enableManagerContext = true;
+				enableManagerContext = true;
 
-					final String securePortString = cmd.getOptionValue( "mp", Integer.toString( defaultParameters.getSslport() ) );
-					sslPort = Integer.parseInt( securePortString );
+				final String securePortString = cmd.getOptionValue( "mp", Integer.toString( defaultParameters.getSslport() ) );
+				sslPort = Integer.parseInt( securePortString );
 
-					if ( !cmd.hasOption( "d" ) )
-						throw new IllegalArgumentException( "Dataset list file is necessary for BigDataServer manager" );
-				}
+				if ( !cmd.hasOption( "d" ) )
+					throw new IllegalArgumentException( "Dataset list file is necessary for BigDataServer manager" );
 			}
 
 			// Path for holding the dataset file

@@ -15,6 +15,4 @@ public class Constants
 	public static final int THUMBNAIL_WIDTH = 100;
 
 	public static final int THUMBNAIL_HEIGHT = 100;
-
-	public static final boolean ENABLE_EXPERIMENTAL_FEATURES = false;
 }
