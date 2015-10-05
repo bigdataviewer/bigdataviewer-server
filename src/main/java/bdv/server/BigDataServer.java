@@ -155,20 +155,13 @@ public class BigDataServer
 			final HashLoginService loginService = new HashLoginService( "BigDataServerRealm", Resource.newClassPathResource( "etc/realm.properties" ).toString() );
 			server.addBean( loginService );
 
-			final HandlerList handlerList = new HandlerList();
-
-			final ContextHandler redirectHandler = new ContextHandler();
-			redirectHandler.setContextPath( "/" + Constants.MANAGER_CONTEXT_NAME );
-			redirectHandler.setHandler( new SecuredRedirectHandler() );
-
-			handlerList.addHandler( redirectHandler );
-
 			final ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
 			sh.setLoginService( loginService );
 			sh.setAuthenticator( new BasicAuthenticator() );
 			sh.addConstraintMapping( cm );
 			sh.setHandler( statHandler );
 
+			final HandlerList handlerList = new HandlerList();
 			handlerList.addHandler( sh );
 
 			handler = handlerList;
