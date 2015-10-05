@@ -326,11 +326,13 @@ public class BigDataServer
 
 					final String securePortString = cmd.getOptionValue( "mp", Integer.toString( defaultParameters.getSslport() ) );
 					sslPort = Integer.parseInt( securePortString );
+
+					if ( !cmd.hasOption( "d" ) )
+						throw new IllegalArgumentException( "Dataset list file is necessary for BigDataServer manager" );
 				}
 			}
 
 			// Path for holding the dataset file
-			Path readDatasetFilePath;
 			if ( cmd.hasOption( "d" ) )
 			{
 				// process the file given with "-d"
@@ -342,25 +344,8 @@ public class BigDataServer
 				if ( Files.notExists( path ) )
 					throw new IllegalArgumentException( "Dataset list file does not exist." );
 
-				readDatasetFilePath = path;
+				readDatasetFile( datasets, path );
 			}
-			else
-			{
-				// If the user does not provide any dataset file,
-				// we keep the adding dataset in {Working folder}/.data/list.txt
-				final Path datasetFileFolderPath = Paths.get( System.getProperty( "user.dir" ) + "/.data" );
-
-				if ( Files.notExists( datasetFileFolderPath ) )
-					Files.createDirectory( datasetFileFolderPath );
-
-				final Path datasetFilePath = Paths.get( System.getProperty( "user.dir" ) + "/.data/list.txt" );
-
-				if ( Files.notExists( datasetFilePath ) )
-					Files.createFile( datasetFilePath );
-
-				readDatasetFilePath = datasetFilePath;
-			}
-			readDatasetFile( datasets, readDatasetFilePath );
 
 			// process additional {name, name.xml} pairs given on the
 			// command-line
@@ -374,6 +359,9 @@ public class BigDataServer
 				final String xmlpath = leftoverArgs[ i + 1 ];
 				tryAddDataset( datasets, name, xmlpath );
 			}
+
+			if ( datasets.isEmpty() )
+				throw new IllegalArgumentException( "Dataset list is empty." );
 
 			return new Parameters( port, sslPort, serverName, datasets, thumbnailDirectory, enableManagerContext );
 		}
