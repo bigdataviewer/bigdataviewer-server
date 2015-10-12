@@ -11,7 +11,6 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -28,16 +27,10 @@ import sun.security.x509.X500Name;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -55,17 +48,12 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -87,8 +75,6 @@ import java.util.regex.Pattern;
  *  -m              Enable statistics and manager context.
  *  -mp             Manager context HTTPS port.
  * </pre>
- *
- *
  * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
  * @author HongKee Moon <moon@mpi-cbg.de>
  */
@@ -480,7 +466,6 @@ public class BigDataServer
 
 		/**
 		 * Get datasets.
-		 *
 		 * @return datasets as a map from dataset name to dataset xml path.
 		 */
 		public Map< String, DataSet > getDatasets()
@@ -649,12 +634,12 @@ public class BigDataServer
 		}
 	}
 
-	private static void tryAddDataset( final HashMap< String, DataSet > datasetNameToDataSet, final String ... args ) throws IllegalArgumentException
+	private static void tryAddDataset( final HashMap< String, DataSet > datasetNameToDataSet, final String... args ) throws IllegalArgumentException
 	{
-		if ( args.length >= 2)
+		if ( args.length >= 2 )
 		{
-			final String name = args[0];
-			final String xmlpath = args[1];
+			final String name = args[ 0 ];
+			final String xmlpath = args[ 1 ];
 
 			for ( final String reserved : Constants.RESERVED_CONTEXT_NAMES )
 				if ( name.equals( reserved ) )
@@ -668,11 +653,11 @@ public class BigDataServer
 			String desc = "";
 			String index = "";
 
-			if( args.length == 5 )
+			if ( args.length == 5 )
 			{
-				category = args[2];
-				desc = args[3];
-				index = args[4];
+				category = args[ 2 ];
+				desc = args[ 3 ];
+				index = args[ 4 ];
 			}
 
 			DataSet ds = new DataSet( name, xmlpath, category, desc, index );
@@ -687,7 +672,7 @@ public class BigDataServer
 		if ( thumbnailDirectoryName != null )
 		{
 			Path thumbnails = Paths.get( thumbnailDirectoryName );
-			if ( ! Files.exists( thumbnails ) )
+			if ( !Files.exists( thumbnails ) )
 			{
 				try
 				{
@@ -702,7 +687,7 @@ public class BigDataServer
 			}
 			else
 			{
-				if ( ! Files.isDirectory( thumbnails ) )
+				if ( !Files.isDirectory( thumbnails ) )
 					LOG.warn( "Thumbnails directory \"" + thumbnailDirectoryName + "\" is not a directory.\n Trying to create temporary directory." );
 				else
 					return thumbnails.toFile().getAbsolutePath();
