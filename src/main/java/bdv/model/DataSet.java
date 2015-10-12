@@ -1,10 +1,14 @@
 package bdv.model;
 
+import org.eclipse.jetty.util.log.Log;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 
 /**
@@ -12,6 +16,8 @@ import java.util.ArrayList;
  */
 public class DataSet
 {
+	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( DataSet.class );
+
 	private static Path dataSetListPath;
 	/**
 	 * DataSet Context name of this {@link bdv.server.CellHandler} is serving.
@@ -30,6 +36,8 @@ public class DataSet
 
 	private String thumbnailUrl;
 	private String datasetUrl;
+
+	public static int numBackups = 5;
 
 	/**
 	 * Instantiates a new DataSet
@@ -198,6 +206,34 @@ public class DataSet
 	{
 		if ( dataSetListPath != null )
 		{
+			// fist make a copy of the XML and save it to not loose it
+			if ( Files.exists( dataSetListPath ) )
+			{
+				int maxExistingBackup = 0;
+				for ( int i = 1; i < numBackups; ++i )
+					if ( Files.exists( Paths.get( dataSetListPath + "~" + i ) ) )
+						maxExistingBackup = i;
+					else
+						break;
+
+				// copy the backups
+				try
+				{
+					for ( int i = maxExistingBackup; i >= 1; --i )
+						Files.copy( Paths.get( dataSetListPath + "~" + i ),
+								Paths.get( dataSetListPath + "~" + ( i + 1 ) ),
+								StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING );
+
+					Files.copy( dataSetListPath, Paths.get( dataSetListPath + "~" + 1 ),
+							StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING );
+				}
+				catch ( final IOException e )
+				{
+					LOG.warn( "Could not save backup of data list file: " + e );
+					e.printStackTrace();
+				}
+			}
+
 			BufferedWriter writer = Files.newBufferedWriter( dataSetListPath, StandardCharsets.UTF_8 );
 			for ( DataSet ds : list )
 			{
