@@ -241,7 +241,7 @@
             $.ajax({
                 type: "POST",
                 url: "/manager/?op=activate",
-                data: { name: $(this).parent().next().text(), active: $(this).prop('checked')},
+                data: { name: $(this).parent().next().next().next().text(), active: $(this).prop('checked')},
                 success: function (msg) {
                     console.info("Dataset activated: " + msg);
                 }
