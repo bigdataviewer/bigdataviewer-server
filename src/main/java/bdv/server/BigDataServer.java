@@ -68,12 +68,13 @@ import java.util.regex.Pattern;
  * is the path to the XML file of the dataset.
  *  -d &lt;FILE&gt;       Dataset file: A plain text file specifying one dataset
  *                  per line. Each line is formatted as "NAME &lt;TAB&gt; XML".
- *  -p &lt;PORT&gt;       Listening port. (default: 8080)
+ *  -m &lt;SECURE_PORT&gt;Manager context HTTPS port. The manager context is automatically enabled.
+ *                  (default: 8443)
+ *  -p &lt;PORT&gt;       Listening port.
+ *                  (default: 8080)
  *  -s &lt;HOSTNAME&gt;   Hostname of the server.
  *  -t &lt;DIRECTORY&gt;  Directory to store thumbnails. (new temporary directory
  *                  by default.)
- *  -m              Enable statistics and manager context.
- *  -mp             Manager context HTTPS port.
  * </pre>
  * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
  * @author HongKee Moon <moon@mpi-cbg.de>
@@ -517,14 +518,10 @@ public class BigDataServer
 				.create( "t" ) );
 
 		options.addOption( OptionBuilder
-				.withDescription( "Enable statistics and manager context." )
-				.create( "m" ) );
-
-		options.addOption( OptionBuilder
-				.withDescription( "Manager context HTTPS port." + "\n(default: " + defaultParameters.getSslport() + ")" )
+				.withDescription( "Manager context HTTPS port. The manager context is automatically enabled." + "\n(default: " + defaultParameters.getSslport() + ")" )
 				.hasArg()
 				.withArgName( "SECURE_PORT" )
-				.create( "mp" ) );
+				.create( "m" ) );
 
 		try
 		{
@@ -550,7 +547,7 @@ public class BigDataServer
 			{
 				enableManagerContext = true;
 
-				final String securePortString = cmd.getOptionValue( "mp", Integer.toString( defaultParameters.getSslport() ) );
+				final String securePortString = cmd.getOptionValue( "m", Integer.toString( defaultParameters.getSslport() ) );
 				sslPort = Integer.parseInt( securePortString );
 
 				if ( !cmd.hasOption( "d" ) )
