@@ -202,7 +202,7 @@ public class BigDataServer
 			handler = handlerList;
 		}
 
-		handlers.addHandler( new IndexPageHandler( server, datasetHandlers ) );
+		handlers.addHandler( new IndexPageHandler( server ) );
 
 		LOG.info( "Set handler: " + handler );
 		server.setHandler( handler );

@@ -5,7 +5,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerCollection;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -26,7 +26,7 @@ public class IndexPageHandler extends ContextHandler
 {
 	private final Server server;
 
-	public IndexPageHandler( final Server server, final ContextHandlerCollection handlers ) throws IOException, URISyntaxException
+	public IndexPageHandler( final Server server ) throws IOException, URISyntaxException
 	{
 		this.server = server;
 		setContextPath( "/" );
@@ -35,7 +35,10 @@ public class IndexPageHandler extends ContextHandler
 	@Override
 	public void doHandle( final String target, final Request baseRequest, final HttpServletRequest request, final HttpServletResponse response ) throws IOException, ServletException
 	{
-		list( baseRequest, response );
+		if ( target.equals( "/" ) )
+			list( baseRequest, response );
+		else
+			super.doHandle( target, baseRequest, request, response );
 	}
 
 	private void list( final Request baseRequest, final HttpServletResponse response ) throws IOException
