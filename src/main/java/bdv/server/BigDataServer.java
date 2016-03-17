@@ -137,7 +137,6 @@ public class BigDataServer
 		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, params.getDatasets(), thumbnailsDirectoryName );
 		handlers.addHandler( datasetHandlers );
 		handlers.addHandler( new JsonDatasetListHandler( server, datasetHandlers ) );
-		handlers.addHandler( new IndexPageHandler( server, datasetHandlers ) );
 
 		Handler handler = handlers;
 		if ( params.enableManagerContext() )
@@ -202,6 +201,8 @@ public class BigDataServer
 
 			handler = handlerList;
 		}
+
+		handlers.addHandler( new IndexPageHandler( server, datasetHandlers ) );
 
 		LOG.info( "Set handler: " + handler );
 		server.setHandler( handler );
