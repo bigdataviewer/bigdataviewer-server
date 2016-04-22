@@ -24,20 +24,19 @@ public class DataSetContextHandler extends ServletContextHandler
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( DataSetContextHandler.class );
 
 	private final ContextHandlerCollection datasetHandlers;
-	private final ServletHandler servletHandler;
 
 	public DataSetContextHandler( final ContextHandlerCollection datasetHandlers )
 	{
 		this.datasetHandlers = datasetHandlers;
 		setContextPath( "/" + Constants.DATASET_CONTEXT_NAME );
 
-		servletHandler = new ServletHandler();
+		final ServletHandler servletHandler = new ServletHandler();
 		Servlet servlet = new DefaultServlet();
 		ServletHolder servletHolder = new ServletHolder( servlet );
 		servletHandler.addServletWithMapping( servletHolder, "/*.xml" );
 		servletHandler.addServletWithMapping( servletHolder, "/*.bdv" );
 
-		setHandler( _servletHandler );
+		setHandler( servletHandler );
 	}
 
 	@Override
@@ -65,7 +64,7 @@ public class DataSetContextHandler extends ServletContextHandler
 		for ( final Handler handler : datasetHandlers.getChildHandlersByClass( CellHandler.class ) )
 		{
 			final CellHandler contextHandler = ( CellHandler ) handler;
-			System.out.println( contextHandler );
+
 			if ( contextHandler.getContextPath().equals( getContextPath() + datasetName ) )
 			{
 				found = contextHandler;
