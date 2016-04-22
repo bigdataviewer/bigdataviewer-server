@@ -18,10 +18,12 @@ import bdv.util.ThumbnailGenerator;
 
 import com.google.gson.GsonBuilder;
 
+import com.google.gson.stream.JsonWriter;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
 import net.imglib2.realtransform.AffineTransform3D;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.log.Log;
@@ -84,6 +86,8 @@ public class CellHandler extends ContextHandler
 
 	private Hdf5ImageLoader imgLoader;
 
+	private String baseUrl;
+
 	/**
 	 * DataSet information holder
 	 */
@@ -92,7 +96,7 @@ public class CellHandler extends ContextHandler
 	public CellHandler( final String baseUrl, final DataSet dataSet, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		active = true;
-
+		this.baseUrl = baseUrl;
 		this.dataSet = dataSet;
 
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
@@ -136,6 +140,12 @@ public class CellHandler extends ContextHandler
 		{
 			if ( settingsXmlString != null )
 				respondWithString( baseRequest, response, "application/xml", settingsXmlString );
+			return;
+		}
+
+		if ( target.startsWith( "/json" ) )
+		{
+			provideJson( baseRequest, response );
 			return;
 		}
 
@@ -373,5 +383,57 @@ public class CellHandler extends ContextHandler
 	public DataSet getDataSet()
 	{
 		return dataSet;
+	}
+
+	private void provideJson( final Request baseRequest, final HttpServletResponse response ) throws IOException
+	{
+		response.setContentType( "application/json" );
+		response.setStatus( HttpServletResponse.SC_OK );
+		baseRequest.setHandled( true );
+
+		final PrintWriter ow = response.getWriter();
+
+		final JsonWriter writer = new JsonWriter( ow );
+
+		writer.setIndent( "\t" );
+
+		writer.beginObject();
+
+		writer.name( getDataSet().getName() ).beginObject();
+
+		writer.name( "id" ).value( getDataSet().getName() );
+
+		writer.name( "category" ).value( getDataSet().getCategory() );
+
+		writer.name( "description" ).value( getDataSet().getDescription() );
+
+		writer.name( "index" ).value( getDataSet().getIndex() );
+
+		writer.name( "thumbnailUrl" ).value( getDataSet().getThumbnailUrl() );
+
+		writer.name( "datasetUrl" ).value( getDataSet().getDatasetUrl() );
+
+		writer.endObject();
+
+		writer.endObject();
+
+		writer.flush();
+
+		writer.close();
+
+		ow.close();
+	}
+
+	public void handleXml( final Request baseRequest, final HttpServletResponse response ) throws IOException
+	{
+		respondWithString( baseRequest, response, "application/xml", datasetXmlString );
+	}
+
+	public void handleBdv( final Request baseRequest, final HttpServletResponse response ) throws IOException
+	{
+		String url = baseUrl;
+		if ( url.endsWith( "/" ) )
+			url = url.substring( 0, url.lastIndexOf( "/" ) );
+		respondWithString( baseRequest, response, "application/bdv", url );
 	}
 }

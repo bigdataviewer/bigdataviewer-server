@@ -135,7 +135,13 @@ public class BigDataServer
 		final HandlerCollection handlers = new HandlerCollection();
 
 		final ContextHandlerCollection datasetHandlers = createHandlers( baseURL, params.getDatasets(), thumbnailsDirectoryName );
+
+		final DataSetContextHandler dataSetContextHandler = new DataSetContextHandler( datasetHandlers );
+
 		handlers.addHandler( datasetHandlers );
+
+		handlers.addHandler( dataSetContextHandler );
+
 		handlers.addHandler( new JsonDatasetListHandler( server, datasetHandlers ) );
 
 		Handler handler = handlers;
@@ -705,7 +711,7 @@ public class BigDataServer
 		{
 			final String name = entry.getKey();
 			final DataSet ds = entry.getValue();
-			final String context = "/" + name;
+			final String context = "/" + Constants.DATASET_CONTEXT_NAME + "/" + name;
 			final CellHandler ctx = new CellHandler( baseURL + context + "/", ds, thumbnailsDirectoryName );
 			ctx.setContextPath( context );
 			handlers.addHandler( ctx );

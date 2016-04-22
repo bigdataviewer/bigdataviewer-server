@@ -6,6 +6,8 @@ public class Constants
 
 	public static final String MANAGER_CONTEXT_NAME = "manager";
 
+	public static final String DATASET_CONTEXT_NAME = "dataset";
+
 	public static final String[] RESERVED_CONTEXT_NAMES = new String[]
 			{
 					DATASETLIST_CONTEXT_NAME,

@@ -48,8 +48,12 @@
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-security</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.antlr</groupId>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+        </dependency>
+        <dependency>
+        <groupId>org.antlr</groupId>
 			<artifactId>stringtemplate</artifactId>
 			<version>3.2.1</version>
 		</dependency>

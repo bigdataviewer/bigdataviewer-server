@@ -118,6 +118,13 @@ public class IndexPageHandler extends ContextHandler
 			sb.append( "\t\tCategory: " + ds.getCategory() + "<br/>\n" );
 			sb.append( "\t\tName: " + ds.getName() + "<br/>\n" );
 			sb.append( "\t\tDescription: " + ds.getDescription() + "<br/>\n" );
+
+			String url = ds.getDatasetUrl();
+			if ( url.endsWith( "/" ) )
+				url = url.substring( 0, url.lastIndexOf( "/" ) );
+
+			sb.append( "\t\t<a href=" + url + ".xml>XML</a>&nbsp;" );
+			sb.append( "\t\t<a href=" + url + ".bdv>BDV</a><br/>\n" );
 			sb.append( "\t</td>\n" );
 			sb.append( "</tr>\n" );
 		}
