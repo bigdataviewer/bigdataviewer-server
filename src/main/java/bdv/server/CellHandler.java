@@ -1,29 +1,19 @@
 package bdv.server;
 
-import bdv.BigDataViewer;
-import bdv.img.cache.CacheHints;
-import bdv.img.cache.LoadingStrategy;
-import bdv.img.cache.VolatileCell;
-import bdv.img.cache.VolatileGlobalCellCache;
-import bdv.img.hdf5.Hdf5ImageLoader;
-import bdv.img.hdf5.Partition;
-import bdv.img.remote.AffineTransform3DJsonSerializer;
-import bdv.img.remote.RemoteImageLoader;
-import bdv.img.remote.RemoteImageLoaderMetaData;
-import bdv.model.DataSet;
-import bdv.spimdata.SequenceDescriptionMinimal;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.XmlIoSpimDataMinimal;
-import bdv.util.ThumbnailGenerator;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import com.google.gson.GsonBuilder;
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.stream.JsonWriter;
-import mpicbg.spim.data.SpimDataException;
-import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
-import net.imglib2.realtransform.AffineTransform3D;
-
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.log.Log;
@@ -33,21 +23,38 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
-import javax.imageio.ImageIO;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonWriter;
 
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import bdv.BigDataViewer;
+import bdv.cache.CacheHints;
+import bdv.cache.LoadingStrategy;
+import bdv.img.cache.VolatileCell;
+import bdv.img.cache.VolatileGlobalCellCache;
+import bdv.img.cache.VolatileGlobalCellCache.Key;
+import bdv.img.cache.VolatileGlobalCellCache.VolatileCellLoader;
+import bdv.img.hdf5.Hdf5ImageLoader;
+import bdv.img.hdf5.Hdf5VolatileShortArrayLoader;
+import bdv.img.hdf5.Partition;
+import bdv.img.remote.AffineTransform3DJsonSerializer;
+import bdv.img.remote.RemoteImageLoader;
+import bdv.img.remote.RemoteImageLoaderMetaData;
+import bdv.model.DataSet;
+import bdv.spimdata.SequenceDescriptionMinimal;
+import bdv.spimdata.SpimDataMinimal;
+import bdv.spimdata.XmlIoSpimDataMinimal;
+import bdv.util.ThumbnailGenerator;
+import mpicbg.spim.data.SpimDataException;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
+import net.imglib2.realtransform.AffineTransform3D;
 
 public class CellHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
 
-	private VolatileGlobalCellCache< VolatileShortArray > cache;
+	private VolatileGlobalCellCache cache;
+
+	private final Hdf5VolatileShortArrayLoader loader;
 
 	private final CacheHints cacheHints;
 
@@ -82,11 +89,11 @@ public class CellHandler extends ContextHandler
 
 	private boolean active = false;
 
-	private SequenceDescriptionMinimal seq;
+	private final SequenceDescriptionMinimal seq;
 
 	private Hdf5ImageLoader imgLoader;
 
-	private String baseUrl;
+	private final String baseUrl;
 
 	/**
 	 * DataSet information holder
@@ -104,7 +111,8 @@ public class CellHandler extends ContextHandler
 		seq = spimData.getSequenceDescription();
 		imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
-		cache = imgLoader.getCache();
+		cache = imgLoader.getCacheControl();
+		loader = imgLoader.getShortArrayLoader();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
 
 		// dataSetURL property is used for providing the XML file by replace
@@ -122,7 +130,7 @@ public class CellHandler extends ContextHandler
 		long size = new File( xmlFilename.replace( ".xml", ".h5" ) ).length();
 
 		if ( imgLoader.getPartitions().size() > 0 )
-			for ( Partition partition : imgLoader.getPartitions() )
+			for ( final Partition partition : imgLoader.getPartitions() )
 			{
 				size += new File( partition.getPath() ).length();
 			}
@@ -170,7 +178,8 @@ public class CellHandler extends ContextHandler
 			final int timepoint = Integer.parseInt( parts[ 2 ] );
 			final int setup = Integer.parseInt( parts[ 3 ] );
 			final int level = Integer.parseInt( parts[ 4 ] );
-			VolatileCell< VolatileShortArray > cell = cache.getGlobalIfCached( timepoint, setup, level, index, cacheHints );
+			final Key key = new VolatileGlobalCellCache.Key( timepoint, setup, level, index );
+			VolatileCell< ? > cell = cache.getLoadingVolatileCache().getIfPresent( key, cacheHints );
 			if ( cell == null )
 			{
 				final int[] cellDims = new int[] {
@@ -181,10 +190,11 @@ public class CellHandler extends ContextHandler
 						Long.parseLong( parts[ 8 ] ),
 						Long.parseLong( parts[ 9 ] ),
 						Long.parseLong( parts[ 10 ] ) };
-				cell = cache.createGlobal( cellDims, cellMin, timepoint, setup, level, index, cacheHints );
+				cell = cache.getLoadingVolatileCache().get( key, cacheHints, new VolatileCellLoader<>( loader, timepoint, setup, level, cellDims, cellMin ) );
 			}
 
-			final short[] data = cell.getData().getCurrentStorageArray();
+			@SuppressWarnings( "unchecked" )
+			final short[] data = ( ( VolatileCell< VolatileShortArray > ) cell ).getData().getCurrentStorageArray();
 			final byte[] buf = new byte[ 2 * data.length ];
 			for ( int i = 0, j = 0; i < data.length; i++ )
 			{
@@ -227,17 +237,17 @@ public class CellHandler extends ContextHandler
 		}
 	}
 
-	public void setDescription(String desc)
+	public void setDescription(final String desc)
 	{
 		dataSet.setDescription( desc );
 	}
 
-	public void setCategory(String cate)
+	public void setCategory(final String cate)
 	{
 		dataSet.setCategory( cate );
 	}
 
-	public void setIndex(String idx)
+	public void setIndex(final String idx)
 	{
 		dataSet.setIndex( idx );
 	}
@@ -358,14 +368,14 @@ public class CellHandler extends ContextHandler
 	 * Set the active status
 	 * @param active
 	 */
-	public void setActive( boolean active ) throws SpimDataException
+	public void setActive( final boolean active ) throws SpimDataException
 	{
 		this.active = active;
 
 		if ( active )
 		{
 			imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
-			cache = imgLoader.getCache();
+			cache = imgLoader.getCacheControl();
 		}
 		else
 		{

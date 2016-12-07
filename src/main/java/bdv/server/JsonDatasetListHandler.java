@@ -21,7 +21,7 @@ import java.util.Comparator;
 /**
  * Provides a list of available datasets on this {@link BigDataServer}
  *
- * @author HongKee Moon <moon@mpi-cbg.de>
+ * @author HongKee Moon &lt;moon@mpi-cbg.de&gt;
  */
 public class JsonDatasetListHandler extends ContextHandler
 {
