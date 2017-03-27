@@ -25,8 +25,8 @@
 		<url>https://github.com/bigdataviewer/bigdataviewer-server/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/bigdataviewer-server/</url>
+		<system>Travis CI</system>
+		<url>https://travis-ci.org/bigdataviewer/bigdataviewer-server</url>
 	</ciManagement>
 
 	<properties>
