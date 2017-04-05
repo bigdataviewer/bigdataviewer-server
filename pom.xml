@@ -3,16 +3,61 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>sc.fiji</groupId>
-		<artifactId>pom-bigdataviewer</artifactId>
-		<version>4.0.1</version>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>14.0.0</version>
 	</parent>
 
+	<groupId>sc.fiji</groupId>
 	<artifactId>bigdataviewer-server</artifactId>
 	<version>2.1.1-SNAPSHOT</version>
 
 	<name>BigDataServer</name>
-	<description>A web server for BigDataViewer datasets</description>
+	<description>A web server for BigDataViewer datasets.</description>
+	<url>https://imagej.net/BigDataServer</url>
+	<inceptionYear>2014</inceptionYear>
+	<organization>
+		<name>BigDataViewer</name>
+		<url>https://imagej.net/BigDataViewer</url>
+	</organization>
+	<licenses>
+		<license>
+			<name>GNU General Public License v3+</name>
+			<url>https://www.gnu.org/licenses/gpl.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>tpietzsch</id>
+			<name>Tobias Pietzsch</name>
+			<url>http://imagej.net/User:Pietzsch</url>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>HongKee Moon</name>
+			<url>http://imagej.net/User:Moon</url>
+			<properties><id>hkmoon</id></properties>
+		</contributor>
+	</contributors>
+
+	<mailingLists>
+		<mailingList>
+			<name>ImageJ Forum</name>
+			<archive>http://forum.imagej.net/</archive>
+		</mailingList>
+	</mailingLists>
 
 	<scm>
 		<connection>scm:git:git://github.com/bigdataviewer/bigdataviewer-server</connection>
@@ -30,7 +75,9 @@
 	</ciManagement>
 
 	<properties>
-		<enforcer.skip>true</enforcer.skip>
+		<package-name>bdv.server</package-name>
+		<license.licenseName>gpl_v3</license.licenseName>
+		<license.copyrightOwners>BigDataViewer developers.</license.copyrightOwners>
 	</properties>
 
 	<repositories>
@@ -60,28 +107,4 @@
 			<version>1.2</version>
 		</dependency>
 	</dependencies>
-
-	<developers>
-		<developer>
-			<id>tpietzsch</id>
-			<name>Tobias Pietzsch</name>
-			<url>http://imagej.net/User:Pietzsch</url>
-			<roles>
-				<role>founder</role>
-				<role>lead</role>
-				<role>developer</role>
-				<role>debugger</role>
-				<role>reviewer</role>
-				<role>support</role>
-				<role>maintainer</role>
-			</roles>
-		</developer>
-	</developers>
-	<contributors>
-		<contributor>
-			<name>HongKee Moon</name>
-			<url>http://imagej.net/User:Moon</url>
-			<properties><id>hkmoon</id></properties>
-		</contributor>
-	</contributors>
 </project>
