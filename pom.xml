@@ -15,7 +15,7 @@
 	<description>A web server for BigDataViewer datasets</description>
 
 	<properties>
-		<scijava.jvm.version>1.7</scijava.jvm.version>
+		<scijava.jvm.version>1.8</scijava.jvm.version>
 	</properties>
 
 	<build>
