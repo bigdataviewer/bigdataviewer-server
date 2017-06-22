@@ -7,16 +7,12 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.ui.PainterThread;
-import net.imglib2.ui.RenderTarget;
-
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.input.SAXBuilder;
 
 import bdv.BigDataViewer;
-import bdv.img.cache.Cache;
+import bdv.cache.CacheControl;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.tools.InitializeViewerState;
@@ -32,6 +28,9 @@ import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.SourceState;
 import bdv.viewer.state.ViewerState;
 import bdv.viewer.state.XmlIoViewerState;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.ui.PainterThread;
+import net.imglib2.ui.RenderTarget;
 
 /**
  * Created by moon on 2/5/15.
@@ -94,7 +93,7 @@ public class ThumbnailGenerator
 			}
 		}
 		final ThumbnailTarget renderTarget = new ThumbnailTarget();
-		new MultiResolutionRenderer( renderTarget, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, AccumulateProjectorARGB.factory, new Cache.Dummy() ).paint( state );
+		new MultiResolutionRenderer( renderTarget, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, AccumulateProjectorARGB.factory, new CacheControl.Dummy() ).paint( state );
 		return renderTarget.bi;
 	}
 

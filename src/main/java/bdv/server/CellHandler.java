@@ -14,10 +14,6 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import mpicbg.spim.data.SpimDataException;
-import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
-import net.imglib2.realtransform.AffineTransform3D;
-
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.log.Log;
@@ -27,11 +23,15 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
+import com.google.gson.GsonBuilder;
+
 import bdv.BigDataViewer;
-import bdv.img.cache.CacheHints;
-import bdv.img.cache.LoadingStrategy;
+import bdv.cache.CacheHints;
+import bdv.cache.LoadingStrategy;
 import bdv.img.cache.VolatileCell;
 import bdv.img.cache.VolatileGlobalCellCache;
+import bdv.img.cache.VolatileGlobalCellCache.Key;
+import bdv.img.cache.VolatileGlobalCellCache.VolatileCellLoader;
 import bdv.img.hdf5.Hdf5ImageLoader;
 import bdv.img.hdf5.Hdf5VolatileShortArrayLoader;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
@@ -41,8 +41,9 @@ import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.util.ThumbnailGenerator;
-
-import com.google.gson.GsonBuilder;
+import mpicbg.spim.data.SpimDataException;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
+import net.imglib2.realtransform.AffineTransform3D;
 
 public class CellHandler extends ContextHandler
 {
@@ -97,7 +98,7 @@ public class CellHandler extends ContextHandler
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
 		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
-		cache = imgLoader.getCache();
+		cache = imgLoader.getCacheControl();
 		loader = imgLoader.getShortArrayLoader();
 		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
 
@@ -144,7 +145,8 @@ public class CellHandler extends ContextHandler
 			final int timepoint = Integer.parseInt( parts[ 2 ] );
 			final int setup = Integer.parseInt( parts[ 3 ] );
 			final int level = Integer.parseInt( parts[ 4 ] );
-			VolatileCell< ? > cell = cache.getGlobalIfCached( timepoint, setup, level, index, cacheHints );
+			final Key key = new VolatileGlobalCellCache.Key( timepoint, setup, level, index );
+			VolatileCell< ? > cell = cache.getLoadingVolatileCache().getIfPresent( key, cacheHints );
 			if ( cell == null )
 			{
 				final int[] cellDims = new int[] {
@@ -155,7 +157,7 @@ public class CellHandler extends ContextHandler
 						Long.parseLong( parts[ 8 ] ),
 						Long.parseLong( parts[ 9 ] ),
 						Long.parseLong( parts[ 10 ] ) };
-				cell = cache.createGlobal( cellDims, cellMin, timepoint, setup, level, index, cacheHints, loader );
+				cell = cache.getLoadingVolatileCache().get( key, cacheHints, new VolatileCellLoader<>( loader, timepoint, setup, level, cellDims, cellMin ) );
 			}
 
 			@SuppressWarnings( "unchecked" )

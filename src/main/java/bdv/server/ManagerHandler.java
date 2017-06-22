@@ -87,10 +87,6 @@ public class ManagerHandler extends ContextHandler
 			final String ds = request.getParameter( "ds" );
 			undeploy( ds, baseRequest, response );
 		}
-		else
-		{
-			return;
-		}
 	}
 
 	public String getByteSizeString( final long size )
