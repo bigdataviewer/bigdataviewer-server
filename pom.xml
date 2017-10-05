@@ -79,6 +79,9 @@
 		<package-name>bdv.server</package-name>
 		<license.licenseName>gpl_v3</license.licenseName>
 		<license.copyrightOwners>BigDataViewer developers.</license.copyrightOwners>
+
+		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
+		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 	</properties>
 
 	<repositories>
