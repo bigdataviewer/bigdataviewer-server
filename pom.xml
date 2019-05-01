@@ -33,7 +33,7 @@
 		<developer>
 			<id>tpietzsch</id>
 			<name>Tobias Pietzsch</name>
-			<url>http://imagej.net/User:Pietzsch</url>
+			<url>https://imagej.net/User:Pietzsch</url>
 			<roles>
 				<role>founder</role>
 				<role>lead</role>
@@ -48,7 +48,7 @@
 	<contributors>
 		<contributor>
 			<name>HongKee Moon</name>
-			<url>http://imagej.net/User:Moon</url>
+			<url>https://imagej.net/User:Moon</url>
 			<properties><id>hkmoon</id></properties>
 		</contributor>
 	</contributors>
