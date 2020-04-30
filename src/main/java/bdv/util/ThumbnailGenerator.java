@@ -114,7 +114,7 @@ public class ThumbnailGenerator
 		final int numGroups = 10;
 		final ArrayList< SourceGroup > groups = new ArrayList< SourceGroup >( numGroups );
 		for ( int i = 0; i < numGroups; ++i )
-			groups.add( new SourceGroup( "", null ) );
+			groups.add( new SourceGroup( "" ) );
 
 		state = new ViewerState( sources, groups, numTimePoints );
 		if ( !sources.isEmpty() )

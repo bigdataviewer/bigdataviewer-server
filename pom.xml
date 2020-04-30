@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>26.0.0</version>
+		<version>28.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -87,8 +87,10 @@
 		<stringtemplate.version>3.2.1</stringtemplate.version>
 
 		<!-- TODO: Remove these version pins and update the code. -->
-		<bigdataviewer-core.version>3.0.3</bigdataviewer-core.version>
-		<imglib2.version>3.3.0</imglib2.version>
+		<bigdataviewer-core.version>9.0.3</bigdataviewer-core.version>
+		<imglib2.version>5.9.0</imglib2.version>
+		<imglib2-cache.version>1.0.0-beta-13</imglib2-cache.version>
+		<spim_data.version>2.2.4</spim_data.version>
 	</properties>
 
 	<repositories>

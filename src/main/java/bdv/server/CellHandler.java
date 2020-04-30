@@ -10,10 +10,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.imglib2.cache.CacheLoader;
+import net.imglib2.cache.LoaderCache;
+import net.imglib2.cache.ref.SoftRefLoaderCache;
+import net.imglib2.img.cell.Cell;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.log.Log;
@@ -26,12 +31,7 @@ import org.jdom2.output.XMLOutputter;
 import com.google.gson.GsonBuilder;
 
 import bdv.BigDataViewer;
-import bdv.cache.CacheHints;
-import bdv.cache.LoadingStrategy;
-import bdv.img.cache.VolatileCell;
 import bdv.img.cache.VolatileGlobalCellCache;
-import bdv.img.cache.VolatileGlobalCellCache.Key;
-import bdv.img.cache.VolatileGlobalCellCache.VolatileCellLoader;
 import bdv.img.hdf5.Hdf5ImageLoader;
 import bdv.img.hdf5.Hdf5VolatileShortArrayLoader;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
@@ -49,11 +49,74 @@ public class CellHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
 
-	private final VolatileGlobalCellCache cache;
+	/**
+	 * Key for a cell identified by timepoint, setup, level, and index
+	 * (flattened spatial coordinate).
+	 */
+	public static class Key
+	{
+		private final int timepoint;
 
-	private final Hdf5VolatileShortArrayLoader loader;
+		private final int setup;
 
-	private final CacheHints cacheHints;
+		private final int level;
+
+		private final long index;
+
+		private final String[] parts;
+
+		/**
+		 * Create a Key for the specified cell. Note that {@code cellDims} and
+		 * {@code cellMin} are not used for {@code hashcode()/equals()}.
+		 *
+		 * @param timepoint
+		 *            timepoint coordinate of the cell
+		 * @param setup
+		 *            setup coordinate of the cell
+		 * @param level
+		 *            level coordinate of the cell
+		 * @param index
+		 *            index of the cell (flattened spatial coordinate of the
+		 *            cell)
+		 */
+		public Key( final int timepoint, final int setup, final int level, final long index, final String[] parts )
+		{
+			this.timepoint = timepoint;
+			this.setup = setup;
+			this.level = level;
+			this.index = index;
+			this.parts = parts;
+
+			int value = Long.hashCode( index );
+			value = 31 * value + level;
+			value = 31 * value + setup;
+			value = 31 * value + timepoint;
+			hashcode = value;
+		}
+
+		@Override
+		public boolean equals( final Object other )
+		{
+			if ( this == other )
+				return true;
+			if ( !( other instanceof VolatileGlobalCellCache.Key ) )
+				return false;
+			final Key that = ( Key ) other;
+			return ( this.index == that.index ) && ( this.timepoint == that.timepoint ) && ( this.setup == that.setup ) && ( this.level == that.level );
+		}
+
+		final int hashcode;
+
+		@Override
+		public int hashCode()
+		{
+			return hashcode;
+		}
+	}
+
+	private final CacheLoader< Key, Cell< ? > > loader;
+
+	private final LoaderCache< Key, Cell< ? > > cache;
 
 	/**
 	 * Full path of the dataset xml file this {@link CellHandler} is serving.
@@ -98,9 +161,20 @@ public class CellHandler extends ContextHandler
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
 		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
-		cache = imgLoader.getCacheControl();
-		loader = imgLoader.getShortArrayLoader();
-		cacheHints = new CacheHints( LoadingStrategy.BLOCKING, 0, false );
+		final Hdf5VolatileShortArrayLoader cacheArrayLoader = imgLoader.getShortArrayLoader();
+		loader = key -> {
+			final int[] cellDims = new int[] {
+					Integer.parseInt( key.parts[ 5 ] ),
+					Integer.parseInt( key.parts[ 6 ] ),
+					Integer.parseInt( key.parts[ 7 ] ) };
+			final long[] cellMin = new long[] {
+					Long.parseLong( key.parts[ 8 ] ),
+					Long.parseLong( key.parts[ 9 ] ),
+					Long.parseLong( key.parts[ 10 ] ) };
+			return new Cell<>( cellDims, cellMin, cacheArrayLoader.loadArray( key.timepoint, key.setup, key.level, cellDims, cellMin ) );
+		};
+
+		cache = new SoftRefLoaderCache<>();
 
 		// dataSetURL property is used for providing the XML file by replace
 		// SequenceDescription>ImageLoader>baseUrl
@@ -145,23 +219,18 @@ public class CellHandler extends ContextHandler
 			final int timepoint = Integer.parseInt( parts[ 2 ] );
 			final int setup = Integer.parseInt( parts[ 3 ] );
 			final int level = Integer.parseInt( parts[ 4 ] );
-			final Key key = new VolatileGlobalCellCache.Key( timepoint, setup, level, index );
-			VolatileCell< ? > cell = cache.getLoadingVolatileCache().getIfPresent( key, cacheHints );
-			if ( cell == null )
+			final Key key = new Key( timepoint, setup, level, index, parts );
+			short[] data;
+			try
 			{
-				final int[] cellDims = new int[] {
-						Integer.parseInt( parts[ 5 ] ),
-						Integer.parseInt( parts[ 6 ] ),
-						Integer.parseInt( parts[ 7 ] ) };
-				final long[] cellMin = new long[] {
-						Long.parseLong( parts[ 8 ] ),
-						Long.parseLong( parts[ 9 ] ),
-						Long.parseLong( parts[ 10 ] ) };
-				cell = cache.getLoadingVolatileCache().get( key, cacheHints, new VolatileCellLoader<>( loader, timepoint, setup, level, cellDims, cellMin ) );
+				final Cell< ? > cell = cache.get( key, loader );
+				data = ( ( VolatileShortArray ) cell.getData() ).getCurrentStorageArray();
+			}
+			catch ( ExecutionException e )
+			{
+				data = new short[ 0 ];
 			}
 
-			@SuppressWarnings( "unchecked" )
-			final short[] data = ( ( VolatileCell< VolatileShortArray > ) cell ).getData().getCurrentStorageArray();
 			final byte[] buf = new byte[ 2 * data.length ];
 			for ( int i = 0, j = 0; i < data.length; i++ )
 			{
