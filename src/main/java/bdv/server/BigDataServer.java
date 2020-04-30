@@ -68,8 +68,9 @@ public class BigDataServer
 			hostname = "localhost";
 		}
 		final String thumbnailDirectory = null;
+		final String baseUrl = null;
 		final boolean enableManagerContext = false;
-		return new Parameters( port, hostname, new HashMap< String, String >(), thumbnailDirectory, enableManagerContext );
+		return new Parameters( port, hostname, new HashMap< String, String >(), thumbnailDirectory, baseUrl, enableManagerContext );
 	}
 
 	public static void main( final String[] args ) throws Exception
@@ -91,7 +92,8 @@ public class BigDataServer
 		connector.setPort( params.getPort() );
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
-		final String baseURL = "http://" + server.getURI().getHost() + ":" + params.getPort();
+		final String baseURL = params.getBaseUrl() != null ? params.getBaseUrl() : "http://" + server.getURI().getHost() + ":" + params.getPort();
+		System.out.println( "XXXXXX baseURL = " + baseURL );
 
 		// Handler initialization
 		final HandlerCollection handlers = new HandlerCollection();
@@ -138,14 +140,17 @@ public class BigDataServer
 
 		private final String thumbnailDirectory;
 
+		private final String baseUrl;
+
 		private final boolean enableManagerContext;
 
-		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final String thumbnailDirectory, final boolean enableManagerContext )
+		Parameters( final int port, final String hostname, final Map< String, String > datasetNameToXml, final String thumbnailDirectory, final String baseUrl, final boolean enableManagerContext )
 		{
 			this.port = port;
 			this.hostname = hostname;
 			this.datasetNameToXml = datasetNameToXml;
 			this.thumbnailDirectory = thumbnailDirectory;
+			this.baseUrl = baseUrl;
 			this.enableManagerContext = enableManagerContext;
 		}
 
@@ -157,6 +162,11 @@ public class BigDataServer
 		public String getHostname()
 		{
 			return hostname;
+		}
+
+		public String getBaseUrl()
+		{
+			return baseUrl;
 		}
 
 		public String getThumbnailDirectory()
@@ -217,6 +227,12 @@ public class BigDataServer
 				.withArgName( "DIRECTORY" )
 				.create( "t" ) );
 
+		options.addOption( OptionBuilder
+				.withDescription( "Base URL under which the server will be made visible (e.g., if behind a proxy)" )
+				.hasArg()
+				.withArgName( "BASEURL" )
+				.create( "b" ) );
+
 		if ( Constants.ENABLE_EXPERIMENTAL_FEATURES )
 		{
 			options.addOption( OptionBuilder
@@ -238,6 +254,9 @@ public class BigDataServer
 
 			// Getting thumbnail directory option
 			final String thumbnailDirectory = cmd.getOptionValue( "t", defaultParameters.getThumbnailDirectory() );
+
+			// Getting base url option
+			final String baseUrl = cmd.getOptionValue( "b", defaultParameters.getBaseUrl() );
 
 			final HashMap< String, String > datasets = new HashMap< String, String >( defaultParameters.getDatasets() );
 
@@ -294,7 +313,7 @@ public class BigDataServer
 			if ( datasets.isEmpty() )
 				throw new IllegalArgumentException( "Dataset list is empty." );
 
-			return new Parameters( port, serverName, datasets, thumbnailDirectory, enableManagerContext );
+			return new Parameters( port, serverName, datasets, thumbnailDirectory, baseUrl, enableManagerContext );
 		}
 		catch ( final ParseException | IllegalArgumentException e )
 		{
