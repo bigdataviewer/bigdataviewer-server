@@ -61,7 +61,7 @@
 	</mailingLists>
 
 	<scm>
-		<connection>scm:git:git://github.com/bigdataviewer/bigdataviewer-server</connection>
+		<connection>scm:git:https://github.com/bigdataviewer/bigdataviewer-server</connection>
 		<developerConnection>scm:git:git@github.com:bigdataviewer/bigdataviewer-server</developerConnection>
 		<tag>HEAD</tag>
 		<url>https://github.com/bigdataviewer/bigdataviewer-server</url>
