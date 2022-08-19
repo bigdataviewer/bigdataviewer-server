@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>28.0.0</version>
+		<version>32.0.0-beta-5</version>
 		<relativePath />
 	</parent>
 
@@ -84,14 +84,8 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<commons-cli.version>1.2</commons-cli.version>
+		<commons-cli.version>1.5.0</commons-cli.version>
 		<stringtemplate.version>3.2.1</stringtemplate.version>
-
-		<!-- TODO: Remove these version pins and update the code. -->
-		<bigdataviewer-core.version>9.0.3</bigdataviewer-core.version>
-		<imglib2.version>5.9.0</imglib2.version>
-		<imglib2-cache.version>1.0.0-beta-13</imglib2-cache.version>
-		<spim_data.version>2.2.4</spim_data.version>
 	</properties>
 
 	<repositories>

@@ -1,16 +1,5 @@
 package bdv.util;
 
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.imageio.ImageIO;
-
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.input.SAXBuilder;
-
 import bdv.BigDataViewer;
 import bdv.cache.CacheControl;
 import bdv.spimdata.SpimDataMinimal;
@@ -18,19 +7,28 @@ import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.tools.transformation.TransformedSource;
-import bdv.tools.transformation.XmlIoTransformedSources;
-import bdv.viewer.Source;
+import bdv.tools.transformation.ManualTransformation;
+import bdv.viewer.BasicViewerState;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.SynchronizedViewerState;
+import bdv.viewer.ViewerState;
 import bdv.viewer.render.AccumulateProjectorARGB;
 import bdv.viewer.render.MultiResolutionRenderer;
-import bdv.viewer.state.SourceGroup;
-import bdv.viewer.state.SourceState;
-import bdv.viewer.state.ViewerState;
+import bdv.viewer.render.RenderTarget;
+import bdv.viewer.render.awt.BufferedImageRenderResult;
 import bdv.viewer.state.XmlIoViewerState;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import javax.imageio.ImageIO;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.ui.PainterThread;
-import net.imglib2.ui.RenderTarget;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.input.SAXBuilder;
+
+import static bdv.viewer.DisplayMode.SINGLE;
+import static bdv.viewer.Interpolation.NEARESTNEIGHBOR;
 
 /**
  * Created by moon on 2/5/15.
@@ -69,16 +67,25 @@ public class ThumbnailGenerator
 		if ( !generator.tryLoadSettings( baseFilename, setupAssignments ) )
 			InitializeViewerState.initBrightness( 0.001, 0.999, state, setupAssignments );
 
-		class ThumbnailTarget implements RenderTarget
+		class ThumbnailTarget implements RenderTarget< BufferedImageRenderResult >
 		{
-			BufferedImage bi;
+			final BufferedImageRenderResult renderResult = new BufferedImageRenderResult();
 
 			@Override
-			public BufferedImage setBufferedImage( final BufferedImage bufferedImage )
+			public BufferedImageRenderResult getReusableRenderResult()
 			{
-				bi = bufferedImage;
-				return null;
+				return renderResult;
 			}
+
+			@Override
+			public BufferedImageRenderResult createRenderResult()
+			{
+				return new BufferedImageRenderResult();
+			}
+
+			@Override
+			public void setRenderResult( final BufferedImageRenderResult renderResult )
+			{}
 
 			@Override
 			public int getWidth()
@@ -93,15 +100,50 @@ public class ThumbnailGenerator
 			}
 		}
 		final ThumbnailTarget renderTarget = new ThumbnailTarget();
-		new MultiResolutionRenderer( renderTarget, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, AccumulateProjectorARGB.factory, new CacheControl.Dummy() ).paint( state );
-		return renderTarget.bi;
+		final MultiResolutionRenderer renderer = new MultiResolutionRenderer(
+				renderTarget, () -> {}, new double[] { 1 }, 0, 1, null, false,
+				AccumulateProjectorARGB.factory, new CacheControl.Dummy() );
+		renderer.paint( state );
+		return renderTarget.renderResult.getBufferedImage();
+	}
+
+	/**
+	 * Initialize ViewerState with the given {@code sources} and {@code numTimepoints}.
+	 * Set up {@code numGroups} SourceGroups named "group 1", "group 2", etc. Add the
+	 * first source to the first group, the second source to the second group etc.
+	 *
+	 * TODO: Setting up groups like this doesn't make a lot of sense. This just
+	 *   replicates legacy behaviour. The remaining thing that stands in the way of
+	 *   removing it is ViewerState serialization, which assumes that there are always 10
+	 *   groups ... m(
+	 */
+	private static SynchronizedViewerState setupState( final List< SourceAndConverter< ? > > sources, final int numTimepoints, final int numGroups )
+	{
+		final SynchronizedViewerState state = new SynchronizedViewerState( new BasicViewerState() );
+		state.addSources( sources );
+		state.setSourcesActive( sources, true );
+		for ( int i = 0; i < numGroups; ++i ) {
+			final bdv.viewer.SourceGroup handle = new bdv.viewer.SourceGroup();
+			state.addGroup( handle );
+			state.setGroupName( handle,  "group " + ( i + 1 ) );
+			state.setGroupActive( handle, true );
+			if ( i < sources.size() )
+				state.addSourceToGroup( sources.get( i ), handle );
+		}
+		state.setNumTimepoints( numTimepoints );
+		state.setInterpolation( NEARESTNEIGHBOR );
+		state.setDisplayMode( SINGLE );
+		state.setCurrentSource( sources.isEmpty() ? null : sources.get( 0 ) );
+		state.setCurrentGroup( numGroups <= 0 ? null : state.getGroups().get( 0 ) );
+
+		return state;
 	}
 
 	/**
 	 * Currently rendered state (visible sources, transformation, timepoint,
 	 * etc.)
 	 */
-	private final ViewerState state;
+	private final SynchronizedViewerState state;
 
 	/**
 	 * @param sources
@@ -112,56 +154,14 @@ public class ThumbnailGenerator
 	private ThumbnailGenerator( final List< SourceAndConverter< ? > > sources, final int numTimePoints )
 	{
 		final int numGroups = 10;
-		final ArrayList< SourceGroup > groups = new ArrayList< SourceGroup >( numGroups );
-		for ( int i = 0; i < numGroups; ++i )
-			groups.add( new SourceGroup( "" ) );
-
-		state = new ViewerState( sources, groups, numTimePoints );
-		if ( !sources.isEmpty() )
-			state.setCurrentSource( 0 );
+		state = setupState( sources, numTimePoints, numGroups );
 	}
 
 	private void stateFromXml( final Element parent )
 	{
 		final XmlIoViewerState io = new XmlIoViewerState();
-		io.restoreFromXml( parent.getChild( io.getTagName() ), state );
-	}
-
-	private static class ManualTransformation
-	{
-		private final ViewerState state ;
-
-		private final XmlIoTransformedSources io;
-
-		public ManualTransformation( final ViewerState state )
-		{
-			this.state = state;
-			io = new XmlIoTransformedSources();
-		}
-
-		public void restoreFromXml( final Element parent )
-		{
-			final Element elem = parent.getChild( io.getTagName() );
-			final List< TransformedSource< ? > > sources = getTransformedSources();
-			final List< AffineTransform3D > transforms = io.fromXml( elem ).getTransforms();
-			if ( sources.size() != transforms.size() )
-				System.err.println( "failed to load <" + io.getTagName() + "> source and transform count mismatch" );
-			else
-				for ( int i = 0; i < sources.size(); ++i )
-					sources.get( i ).setFixedTransform( transforms.get( i ) );
-		}
-
-		private ArrayList< TransformedSource< ? > > getTransformedSources()
-		{
-			final ArrayList< TransformedSource< ? > > list = new ArrayList< TransformedSource< ? > >();
-			for ( final SourceState< ? > sourceState : state.getSources() )
-			{
-				final Source< ? > source = sourceState.getSpimSource();
-				if ( TransformedSource.class.isInstance( source ) )
-					list.add( ( TransformedSource< ? > ) source );
-			}
-			return list;
-		}
+		final bdv.viewer.state.ViewerState deprecatedState = new bdv.viewer.state.ViewerState( state );
+		io.restoreFromXml( parent.getChild( io.getTagName() ), deprecatedState );
 	}
 
 	private boolean tryLoadSettings( final String baseFilename, final SetupAssignments setupAssignments )
@@ -176,7 +176,7 @@ public class ThumbnailGenerator
 				final Element root = doc.getRootElement();
 				stateFromXml( root );
 				setupAssignments.restoreFromXml( root );
-				new ManualTransformation( state ).restoreFromXml( root );
+				new ManualTransformation( state.getSources() ).restoreFromXml( root );
 				return true;
 			}
 			catch ( final Exception e )
@@ -210,5 +210,4 @@ public class ThumbnailGenerator
 			e.printStackTrace();
 		}
 	}
-
 }
