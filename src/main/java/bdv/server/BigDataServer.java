@@ -3,7 +3,7 @@ package bdv.server;
 import mpicbg.spim.data.SpimDataException;
 
 import org.apache.commons.cli.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectorStatistics;
 import org.eclipse.jetty.server.Handler;
