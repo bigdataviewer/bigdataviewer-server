@@ -54,7 +54,7 @@ import com.google.gson.GsonBuilder;
 import bdv.BigDataViewer;
 import bdv.img.cache.VolatileGlobalCellCache;
 import bdv.img.hdf5.Hdf5ImageLoader;
-import bdv.img.hdf5.Hdf5VolatileShortArrayLoader;
+import bdv.img.hdf5.Hdf5ImageLoader.SetupImgLoader;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
 import bdv.img.remote.RemoteImageLoader;
 import bdv.img.remote.RemoteImageLoaderMetaData;
@@ -182,7 +182,6 @@ public class CellHandler extends ContextHandler
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
 		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
 
-		final Hdf5VolatileShortArrayLoader cacheArrayLoader = imgLoader.getShortArrayLoader();
 		loader = key -> {
 			final int[] cellDims = new int[] {
 					Integer.parseInt( key.parts[ 5 ] ),
@@ -192,7 +191,8 @@ public class CellHandler extends ContextHandler
 					Long.parseLong( key.parts[ 8 ] ),
 					Long.parseLong( key.parts[ 9 ] ),
 					Long.parseLong( key.parts[ 10 ] ) };
-			return new Cell<>( cellDims, cellMin, cacheArrayLoader.loadArray( key.timepoint, key.setup, key.level, cellDims, cellMin ) );
+			SetupImgLoader<?, ?> setupImgLoader = imgLoader.getSetupImgLoader(key.setup);
+			return new Cell<>( cellDims, cellMin, setupImgLoader.getVolatileImage(key.timepoint, key.level));
 		};
 
 		cache = new SoftRefLoaderCache<>();

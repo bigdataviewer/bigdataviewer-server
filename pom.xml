@@ -86,6 +86,7 @@
 
 		<commons-cli.version>1.5.0</commons-cli.version>
 		<stringtemplate.version>3.2.1</stringtemplate.version>
+		<bigdataviewer-core.version>10.4.6</bigdataviewer-core.version>
 	</properties>
 
 	<repositories>
