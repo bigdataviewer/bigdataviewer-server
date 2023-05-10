@@ -2,7 +2,7 @@
  * #%L
  * A web server for BigDataViewer datasets.
  * %%
- * Copyright (C) 2014 - 2022 BigDataViewer developers.
+ * Copyright (C) 2014 - 2023 BigDataViewer developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
