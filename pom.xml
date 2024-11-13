@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>34.1.0</version>
+		<version>39.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -84,9 +84,7 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<commons-cli.version>1.5.0</commons-cli.version>
 		<stringtemplate.version>3.2.1</stringtemplate.version>
-		<bigdataviewer-core.version>10.4.6</bigdataviewer-core.version>
 	</properties>
 
 	<repositories>
