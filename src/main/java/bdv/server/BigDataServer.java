@@ -80,7 +80,13 @@ import mpicbg.spim.data.SpimDataException;
  */
 public class BigDataServer
 {
-	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( BigDataServer.class );
+	private static final org.eclipse.jetty.util.log.Logger LOG;
+
+	static {
+//		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
+//		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog" );
+		LOG = Log.getLogger( BigDataServer.class );
+	}
 
 	static Parameters getDefaultParameters()
 	{
@@ -102,8 +108,6 @@ public class BigDataServer
 
 	public static void main( final String[] args ) throws Exception
 	{
-		System.setProperty( "org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog" );
-
 		final Parameters params = processOptions( args, getDefaultParameters() );
 		if ( params == null )
 			return;
@@ -120,7 +124,6 @@ public class BigDataServer
 		LOG.info( "Set connectors: " + connector );
 		server.setConnectors( new Connector[] { connector } );
 		final String baseURL = params.getBaseUrl() != null ? params.getBaseUrl() : "http://" + server.getURI().getHost() + ":" + params.getPort();
-		System.out.println( "XXXXXX baseURL = " + baseURL );
 
 		// Handler initialization
 		final HandlerCollection handlers = new HandlerCollection();
