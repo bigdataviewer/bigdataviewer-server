@@ -27,19 +27,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.imglib2.cache.CacheLoader;
-import net.imglib2.cache.LoaderCache;
-import net.imglib2.cache.ref.SoftRefLoaderCache;
-import net.imglib2.img.cell.Cell;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.log.Log;
@@ -52,9 +48,8 @@ import org.jdom2.output.XMLOutputter;
 import com.google.gson.GsonBuilder;
 
 import bdv.BigDataViewer;
-import bdv.img.cache.VolatileGlobalCellCache;
+import bdv.cache.SharedQueue;
 import bdv.img.hdf5.Hdf5ImageLoader;
-import bdv.img.hdf5.Hdf5ImageLoader.SetupImgLoader;
 import bdv.img.remote.AffineTransform3DJsonSerializer;
 import bdv.img.remote.RemoteImageLoader;
 import bdv.img.remote.RemoteImageLoaderMetaData;
@@ -63,81 +58,16 @@ import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.util.ThumbnailGenerator;
 import mpicbg.spim.data.SpimDataException;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
+import net.imglib2.img.cell.AbstractCellImg;
+import net.imglib2.img.cell.Cell;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 
 public class CellHandler extends ContextHandler
 {
 	private static final org.eclipse.jetty.util.log.Logger LOG = Log.getLogger( CellHandler.class );
-
-	/**
-	 * Key for a cell identified by timepoint, setup, level, and index
-	 * (flattened spatial coordinate).
-	 */
-	public static class Key
-	{
-		private final int timepoint;
-
-		private final int setup;
-
-		private final int level;
-
-		private final long index;
-
-		private final String[] parts;
-
-		/**
-		 * Create a Key for the specified cell. Note that {@code cellDims} and
-		 * {@code cellMin} are not used for {@code hashcode()/equals()}.
-		 *
-		 * @param timepoint
-		 *            timepoint coordinate of the cell
-		 * @param setup
-		 *            setup coordinate of the cell
-		 * @param level
-		 *            level coordinate of the cell
-		 * @param index
-		 *            index of the cell (flattened spatial coordinate of the
-		 *            cell)
-		 */
-		public Key( final int timepoint, final int setup, final int level, final long index, final String[] parts )
-		{
-			this.timepoint = timepoint;
-			this.setup = setup;
-			this.level = level;
-			this.index = index;
-			this.parts = parts;
-
-			int value = Long.hashCode( index );
-			value = 31 * value + level;
-			value = 31 * value + setup;
-			value = 31 * value + timepoint;
-			hashcode = value;
-		}
-
-		@Override
-		public boolean equals( final Object other )
-		{
-			if ( this == other )
-				return true;
-			if ( !( other instanceof VolatileGlobalCellCache.Key ) )
-				return false;
-			final Key that = ( Key ) other;
-			return ( this.index == that.index ) && ( this.timepoint == that.timepoint ) && ( this.setup == that.setup ) && ( this.level == that.level );
-		}
-
-		final int hashcode;
-
-		@Override
-		public int hashCode()
-		{
-			return hashcode;
-		}
-	}
-
-	private final CacheLoader< Key, Cell< ? > > loader;
-
-	private final LoaderCache< Key, Cell< ? > > cache;
 
 	/**
 	 * Full path of the dataset xml file this {@link CellHandler} is serving.
@@ -175,27 +105,15 @@ public class CellHandler extends ContextHandler
 	 */
 	private final String thumbnailFilename;
 
+	private final Hdf5ImageLoader imgLoader;
+
 	public CellHandler( final String baseUrl, final String xmlFilename, final String datasetName, final String thumbnailsDirectory ) throws SpimDataException, IOException
 	{
 		final XmlIoSpimDataMinimal io = new XmlIoSpimDataMinimal();
 		final SpimDataMinimal spimData = io.load( xmlFilename );
 		final SequenceDescriptionMinimal seq = spimData.getSequenceDescription();
-		final Hdf5ImageLoader imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
-
-		loader = key -> {
-			final int[] cellDims = new int[] {
-					Integer.parseInt( key.parts[ 5 ] ),
-					Integer.parseInt( key.parts[ 6 ] ),
-					Integer.parseInt( key.parts[ 7 ] ) };
-			final long[] cellMin = new long[] {
-					Long.parseLong( key.parts[ 8 ] ),
-					Long.parseLong( key.parts[ 9 ] ),
-					Long.parseLong( key.parts[ 10 ] ) };
-			SetupImgLoader<?, ?> setupImgLoader = imgLoader.getSetupImgLoader(key.setup);
-			return new Cell<>( cellDims, cellMin, setupImgLoader.getVolatileImage(key.timepoint, key.level));
-		};
-
-		cache = new SoftRefLoaderCache<>();
+		imgLoader = ( Hdf5ImageLoader ) seq.getImgLoader();
+		imgLoader.setCreatedSharedQueue( new SharedQueue( 0 ) );
 
 		// dataSetURL property is used for providing the XML file by replace
 		// SequenceDescription>ImageLoader>baseUrl
@@ -240,25 +158,15 @@ public class CellHandler extends ContextHandler
 			final int timepoint = Integer.parseInt( parts[ 2 ] );
 			final int setup = Integer.parseInt( parts[ 3 ] );
 			final int level = Integer.parseInt( parts[ 4 ] );
-			final Key key = new Key( timepoint, setup, level, index, parts );
-			short[] data;
-			try
-			{
-				final Cell< ? > cell = cache.get( key, loader );
-				data = ( ( VolatileShortArray ) cell.getData() ).getCurrentStorageArray();
-			}
-			catch ( ExecutionException e )
-			{
-				data = new short[ 0 ];
-			}
 
+			final RandomAccessibleInterval< ? > image = imgLoader.getSetupImgLoader( setup ).getImage( timepoint, level );
+			final AbstractCellImg< UnsignedShortType, ?, ?, ? > cellImg = ( AbstractCellImg< UnsignedShortType, ?, ?, ? > ) image;
+			final long[] gridpos = new long[ cellImg.numDimensions() ];
+			cellImg.getCellGrid().getCellGridPositionFlat( index, gridpos );
+			final Cell< ? > cell = cellImg.getCells().getAt( gridpos );
+			final short[] data = ( ( VolatileShortArray ) cell.getData() ).getCurrentStorageArray();
 			final byte[] buf = new byte[ 2 * data.length ];
-			for ( int i = 0, j = 0; i < data.length; i++ )
-			{
-				final short s = data[ i ];
-				buf[ j++ ] = ( byte ) ( ( s >> 8 ) & 0xff );
-				buf[ j++ ] = ( byte ) ( s & 0xff );
-			}
+			ByteBuffer.wrap( buf ).asShortBuffer().put( data );
 
 			response.setContentType( "application/octet-stream" );
 			response.setContentLength( buf.length );
