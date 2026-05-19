@@ -123,7 +123,7 @@ public class ThumbnailGenerator
 		final ThumbnailTarget renderTarget = new ThumbnailTarget();
 		final MultiResolutionRenderer renderer = new MultiResolutionRenderer(
 				renderTarget, () -> {}, new double[] { 1 }, 0, 1, null, false,
-				AccumulateProjectorARGB.factory, new CacheControl.Dummy() );
+				new CacheControl.Dummy() );
 		renderer.paint( state );
 		return renderTarget.renderResult.getBufferedImage();
 	}
